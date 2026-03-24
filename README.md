@@ -1,145 +1,326 @@
 # Rent Contract Bot
 
-Telegram-бот для автоматизации создания договоров аренды квартир. Распознаёт паспорт арендатора через Claude Vision AI, заполняет шаблон договора и отправляет готовый PDF — за 2-3 минуты вместо 25-40 минут ручной работы.
+Telegram-бот для автоматизации создания договоров аренды квартир. Распознаёт паспорт арендатора через Claude Vision AI, заполняет шаблон договора и отправляет готовый PDF/DOCX — за 2-3 минуты вместо 25-40 минут ручной работы.
+
+**Текущая версия:** v1.3-multi-group
+**Кодовая база:** ~2300 строк Python, 11 модулей
+**Тесты:** 76 (включая моки OCR, DB, интеграционные)
+
+---
+
+## Быстрый старт для разработчика
+
+> При возвращении к проекту в новой сессии Claude Code скажите:
+> **"Прочитай README.md и продолжаем работу над ботом аренды"**
+
+### Ключевые файлы (читать в первую очередь)
+
+| Файл | Строк | Что внутри |
+|------|-------|------------|
+| `bot/handlers/conversation.py` | 1043 | **Главный файл** — FSM-диалог, 25 состояний, все хендлеры |
+| `document_service.py` | 376 | Генерация документов: TXT/DOCX шаблоны → PDF, суммы прописью |
+| `ocr_service.py` | 218 | Claude Vision API, распознавание паспортов, 10 полей |
+| `database.py` | 171 | Async SQLAlchemy: save, get, stats, history |
+| `models.py` | 105 | ContractData (dataclass DTO) + Contract (ORM) |
+| `apartments.json` | — | Конфиг квартир: группы, адреса, площади, номера для договоров |
+| `bot/handlers/history.py` | 159 | /history — год → месяц → договоры → PDF |
+| `bot/handlers/stats.py` | 39 | /stats — статистика |
+| `main.py` | 54 | Точка входа: Application + PicklePersistence |
+
+---
 
 ## Возможности
 
-- **Диалоговый сбор данных** — пошаговый интерфейс с кнопками: выбор группы, квартиры, дат (календарь), сумм, контактов
-- **OCR паспорта** — загрузка 2 страниц паспорта → распознавание через Claude Vision API → редактирование результатов
-- **Сожители** — сканирование паспортов совместно проживающих (до 5 человек)
-- **Генерация PDF** — заполнение TXT-шаблона + конвертация в PDF через LibreOffice
-- **Суммы прописью** — автоматическая генерация на русском языке
-- **История договоров** — `/history` с фильтром по году и месяцу, открытие PDF из чата
+- **4 группы объектов** — Подольская 38, Подольская 39, Черная Речка, Заозерная (расширяемо через apartments.json)
+- **Инлайн-календарь** для выбора дат (telegram-bot-calendar)
+- **OCR паспорта** — 2 страницы → Claude Vision API (tool_use) → 10 полей → редактирование кнопками
+- **Сожители** — OCR паспортов до 5 совместно проживающих
+- **Генерация документов** — заполнение TXT или DOCX шаблонов + конвертация PDF через LibreOffice
+- **Выбор формата** — PDF / DOCX / Оба
+- **Суммы прописью** — автогенерация на русском (до 999 999 999)
+- **История** — `/history` → год → месяц → список договоров → открытие PDF
 - **Статистика** — `/stats` с разбивкой по группам и месяцам
-- **Хранение в БД** — все договоры сохраняются в SQLite
+- **Хранение в БД** — SQLite через async SQLAlchemy
+- **Персистентность** — PicklePersistence сохраняет диалоги между перезапусками
+
+---
 
 ## Архитектура
 
 ```
-Telegram Bot (FSM Dialog)
-        │
-   Services Layer
-        │
-   ┌────┼────┬──────────┐
-   OCR  │ Document  │ Database
-Service │ Service   │ (SQLite)
-(Claude)│ (LibreOffice)
+┌─────────────────────────────────┐
+│  Telegram Bot (python-telegram-bot 22.x)  │
+│  main.py → ApplicationBuilder + Polling    │
+└────────────────┬────────────────┘
+                 │
+    ┌────────────┼────────────────┐
+    │            │                │
+┌───┴───┐  ┌────┴────┐  ┌───────┴───────┐
+│ FSM   │  │ history │  │    stats      │
+│ 25    │  │ year →  │  │ total/group/  │
+│ states│  │ month → │  │ month         │
+│       │  │ PDF     │  │               │
+└───┬───┘  └────┬────┘  └───────┬───────┘
+    │           │               │
+    ├───────────┼───────────────┤
+    │      Services Layer       │
+    ├───────────┬───────────────┤
+    │           │               │
+┌───┴───┐  ┌───┴────┐  ┌───────┴───┐
+│  OCR  │  │Document│  │ Database  │
+│Service│  │Service │  │ (SQLite)  │
+│(Claude│  │(Libre  │  │ async     │
+│Vision)│  │Office) │  │           │
+└───────┘  └────────┘  └───────────┘
 ```
 
-### Модули
+---
 
-| Модуль | Назначение |
-|--------|------------|
-| `main.py` | Точка входа, конфигурация Application + PicklePersistence |
-| `config.py` | Загрузка .env, валидация, пути |
-| `models.py` | ContractData (DTO) + Contract (SQLAlchemy ORM) |
-| `database.py` | Async SQLAlchemy 2.0 + aiosqlite |
-| `document_service.py` | Заполнение шаблонов, конвертация PDF, суммы прописью |
-| `ocr_service.py` | Claude Vision API, распознавание паспортов |
-| `validators.py` | Валидация дат, email, сумм, возраста |
-| `logger.py` | Двойной вывод: консоль + ротируемый файл |
-| `bot/handlers/conversation.py` | FSM-диалог создания договора (24 состояния) |
-| `bot/handlers/history.py` | Команда /history — год → месяц → договоры → PDF |
-| `bot/handlers/stats.py` | Команда /stats — статистика договоров |
-| `apartments.json` | Фиксированные данные квартир (адрес, площадь, опись) |
+## FSM-диалог (25 состояний)
+
+Полный флоу создания договора в `bot/handlers/conversation.py`:
+
+```
+/start
+  → GROUP                  — кнопки групп (из apartments.json)
+  → APARTMENT              — кнопки квартир
+  → CONTRACT_DATE          — инлайн-календарь
+  → ACT_DATE               — инлайн-календарь
+  → CONTRACT_DURATION      — ввод дней (365)
+  → MONTHLY_AMOUNT         — ввод суммы
+  → DEPOSIT_AMOUNT         — ввод суммы
+  → DEPOSIT_METHOD         — кнопки: Единовременно / 50%+50%
+  → PHONE                  — ввод (любой формат)
+  → EMAIL                  — ввод с валидацией
+  → TELEGRAM               — ввод @username
+  → RESIDENTS_CHOICE       — кнопки: 1 человек / Совместное
+     ├→ ROOMMATE_PAGE1     — загрузка файла паспорта сожителя
+     ├→ ROOMMATE_PAGE2     — загрузка файла прописки сожителя
+     ├→ ROOMMATE_CONFIRM_OCR — Да/Нет/Исправить/Переснять
+     ├→ ROOMMATE_EDIT_FIELD — ввод нового значения поля
+     ├→ ROOMMATE_MORE      — Ещё один / Больше нет (макс 5)
+  → EXTRA_CONDITIONS_CHOICE — кнопки: Нет / Ввести
+     └→ EXTRA_CONDITIONS_INPUT — ввод текста
+  → PASSPORT_PAGE1         — загрузка файла паспорта арендатора
+  → PASSPORT_PAGE2         — загрузка файла прописки + OCR
+  → CONFIRM_OCR            — Да/Нет/Исправить/Переснять
+     └→ EDIT_FIELD          — выбор поля кнопкой → ввод значения
+  → CHOOSE_FORMAT          — кнопки: PDF / DOCX / Оба
+  → CONFIRM                — генерация + сохранение + отправка
+```
+
+### Важные детали FSM
+
+- **Паспорт принимается только как файл** (Document.ALL), не как фото — при отправке фото показывает предупреждение
+- **OCR через tool_use** — Claude Vision возвращает structured JSON, нечитаемые поля = "UNCLEAR"
+- **Редактирование OCR** — при "Нет, исправить" показывает 10 кнопок-полей с текущими значениями, тыкнул → ввёл новое → вернулся к списку
+- **Сожители** — полный OCR каждого (2 страницы паспорта), данные форматируются строкой: "ФИО, пол, г.р., паспорт ..., зарег. по адресу ..."
+- **Формат выбирается после OCR** — PDF (через LibreOffice), DOCX/TXT (исходный заполненный файл), или оба
+- **Passport bytes удаляются** из user_data после OCR (экономия PicklePersistence)
+
+---
+
+## Модули — подробное описание
+
+### main.py (54 строки)
+Точка входа. `load_dotenv()` → `configure_logging()` → `config.validate()` → `ApplicationBuilder` с `PicklePersistence` и `concurrent_updates=False` → регистрация handlers → `run_polling()`.
+
+`_post_init()` инициализирует БД и команды меню бота (`/start`, `/history`, `/stats`, `/cancel`).
+
+### config.py (40 строк)
+Загружает `.env`: `BOT_TOKEN`, `ANTHROPIC_KEY`, `LOG_LEVEL`, `STORAGE_DIR`. Вычисляет пути: `TEMPLATES_DIR`, `CONTRACTS_DIR`, `LOGS_DIR`, `DB_PATH`, `PERSISTENCE_PATH`. `validate()` проверяет токены и наличие директорий.
+
+### models.py (105 строк)
+- **ContractData** — `@dataclass`, DTO между слоями. 19 полей: contract_number, group, apartment, tenant_* (ФИО, дата рождения, место, пол, адрес), passport_* (серия, номер, дата, кем, код), tenant_phone/email, contract_date, act_date, monthly_amount (Decimal), deposit_amount (Decimal), deposit_split (bool), pdf_path.
+- **Contract** — SQLAlchemy ORM, зеркалит ContractData + id, created_at.
+
+### validators.py (65 строк)
+Чистые функции, возвращают **нормализованное значение** или **строку ошибки на русском**:
+- `validate_date(str)` → `datetime.date | str` (формат ДД.ММ.ГГГГ, год ≥ 2020)
+- `validate_phone(str)` → `str` (нормализует в +7XXXXXXXXXX)
+- `validate_email(str)` → `str` (lowercase)
+- `validate_amount(str)` → `Decimal | str` (положительное число)
+- `validate_age(dob, contract_date)` → `True | str` (18+)
+
+**Особенность:** phone и email возвращают str и при успехе и при ошибке. В conversation.py для них используется `re.fullmatch()` вместо `isinstance(result, str)`.
+
+### ocr_service.py (218 строк)
+- `_CLAUDE_MODEL = "claude-sonnet-4-6"`
+- `PASSPORT_FIELDS` — 10 полей: tenant_full_name, tenant_dob, tenant_birthplace, tenant_gender, passport_series, passport_number, passport_issued_date, passport_issued_by, passport_division_code, tenant_address
+- `_PASSPORT_TOOL` — tool_use schema для structured output
+- `_resize_image_bytes(bytes, max_px=1600)` — Pillow resize через `asyncio.to_thread()`
+- `extract_passport_fields(page1_bytes, page2_bytes)` → dict — async, `tool_choice={"type":"tool","name":"extract_passport_fields"}`, логирует input/output tokens
+- `get_unclear_fields(fields)` → list — поля со значением "UNCLEAR"
+- `format_ocr_summary(fields)` → str — Telegram Markdown с русскими лейблами
+
+**Стоимость:** ~$0.01 за распознавание (~1635 input + ~319 output tokens)
+
+### document_service.py (376 строк)
+**Данные квартир:**
+- `APARTMENTS_DATA` — загружается из `apartments.json` при импорте
+- `get_apartment_names(group)` — список квартир (исключая `_short`)
+- `get_apartment_fixed_data(group, apt)` — address, rooms, area, inventory
+
+**Номер договора:**
+- `generate_contract_number(group, apt, date)` → `"П38/4/220209"` — short_group из `_short`, apt из `contract_num`, дата ДДММГГ
+
+**Суммы прописью:**
+- `amount_to_words(int)` → русский текст (до 999 999 999)
+- Поддерживает миллионы, тысячи, женский/мужской род
+
+**Шаблоны:**
+- `_fill_txt_template(path, replacements)` — читает TXT, заменяет `[PLACEHOLDER]`
+- `_fill_docx_template(path, replacements, output)` — python-docx, замена в параграфах и таблицах
+- Приоритет: .docx → .txt
+
+**PDF конвертация:**
+- `_find_libreoffice()` — Windows: ищет `soffice.exe` в Program Files; Linux: `shutil.which("libreoffice")`
+- `_convert_to_pdf(src, out_dir)` — subprocess, timeout=60, headless
+
+**Главная функция:**
+- `generate_contract(data, extra)` → str (pdf_path) — находит шаблон, заполняет, конвертирует
+
+**30 плейсхолдеров:**
+`[НОМЕР_ДОГОВОРА]`, `[ДАТА_ДОГОВОРА]`, `[ДАТА_АКТА]`, `[ФИО_АРЕНДАТОРА]`, `[ПОЛ]`, `[ДАТА_РОЖДЕНИЯ]`, `[МЕСТО_РОЖДЕНИЯ]`, `[СЕРИЯ_ПАСПОРТА]`, `[НОМЕР_ПАСПОРТА]`, `[КЕМ_ВЫДАН]`, `[ДАТА_ВЫДАЧИ]`, `[КОД_ПОДРАЗДЕЛЕНИЯ]`, `[АДРЕС_РЕГИСТРАЦИИ]`, `[ТЕЛЕФОН]`, `[EMAIL]`, `[ТЕЛЕГРАМ]`, `[СУММА_АРЕНДЫ]`, `[СУММА_АРЕНДЫ_ПРОПИСЬЮ]`, `[ДЕПОЗИТ]`, `[ДЕПОЗИТ_ПРОПИСЬЮ]`, `[УСЛОВИЕ_ДЕПОЗИТ_НА_2_ЧАСТИ]`, `[ДЕНЬ_ОПЛАТЫ_ЦИФРА]`, `[ДЕНЬ_ОПЛАТЫ_ПРОПИСЬЮ]`, `[АДРЕС_КВАРТИРЫ]`, `[КОЛИЧЕСТВО_КОМНАТ]`, `[ПЛОЩАДЬ]`, `[ОПИСЬ_ИМУЩЕСТВА]`, `[СПИСОК_ПРОЖИВАЮЩИХ]`, `[СРОК_ДОГОВОРА]`, `[ДОП_УСЛОВИЯ]`
+
+### database.py (171 строка)
+Async SQLAlchemy 2.0 + aiosqlite. Функции:
+- `init()` — create tables (idempotent)
+- `save_contract(ContractData)` → int (row id)
+- `get_contracts(offset, limit)` → (list, total)
+- `get_contracts_by_month(year, month)` → list
+- `get_available_years()` → list[int]
+- `get_available_months(year)` → list[int]
+- `get_stats()` → dict (total, by_group, by_month)
+- `get_contract_by_id(id)` → Contract | None
+- `_configure(url)` — для тестов (in-memory DB)
+
+### logger.py (46 строк)
+`configure_logging(log_level, log_dir)` — StreamHandler (stdout) + RotatingFileHandler (5MB, 3 backups → storage/logs/bot.log). `get_logger(name)` → Logger.
+
+### bot/handlers/history.py (159 строк)
+`/history` → год кнопками → месяц кнопками → список договоров кнопками → нажал = получил PDF. Навигация "Назад к годам" / "Назад к месяцам". Только годы/месяцы с договорами.
+
+### bot/handlers/stats.py (39 строк)
+`/stats` → всего договоров, по группам с процентами, по месяцам текущего года.
+
+---
+
+## apartments.json — структура
+
+```json
+{
+  "Подольская 38": {
+    "_short": "П38",                    // код для номера договора
+    "Моя": {                            // имя квартиры = имя шаблона (.txt/.docx)
+      "contract_num": "1",              // номер в номере договора
+      "address": "г. СПб, ул. ...",     // → [АДРЕС_КВАРТИРЫ]
+      "rooms": "1",                     // → [КОЛИЧЕСТВО_КОМНАТ]
+      "area": "25",                     // → [ПЛОЩАДЬ]
+      "inventory": "Кровать, шкаф..."   // → [ОПИСЬ_ИМУЩЕСТВА]
+    },
+    "Синяя": { ... },
+    ...
+  },
+  "Подольская 39": { "_short": "П39", "1": { ... }, ... },
+  "Черная Речка": { "_short": "ЧР" },  // пока без квартир
+  "Заозерная": { "_short": "З" }        // пока без квартир
+}
+```
+
+**Добавление новой группы:** добавить ключ в JSON + создать папку в `storage/templates/` + положить шаблоны. Кнопки в боте генерируются автоматически.
+
+**Добавление квартиры:** добавить в JSON + создать `{имя}.txt` или `{имя}.docx` в папке шаблонов.
+
+---
+
+## Формат номера договора
+
+```
+П38/4/220209
+ │   │  │
+ │   │  └── Дата: 22.02.2009 → 220209 (ДДММГГ)
+ │   └───── Квартира: Эркер → 4 (из contract_num)
+ └───────── Группа: Подольская 38 → П38 (из _short)
+```
+
+### Соответствие квартир → номеров (Подольская 38)
+
+| Квартира | contract_num |
+|----------|-------------|
+| Моя | 1 |
+| Синяя | 2 |
+| Зеленая | 3 |
+| Эркер | 4 |
+| Оранжевая | 5 |
+| Красная | 6 |
+| Винишко | 7 |
+| Двор | 8 |
+
+---
+
+## Шаблоны
+
+### Расположение
+
+```
+storage/templates/
+├── Подольская 38/
+│   ├── Моя.txt         ← имя = ключ в apartments.json
+│   ├── Синяя.txt
+│   ├── Зеленая.txt
+│   ├── Эркер.txt
+│   ├── Оранжевая.txt
+│   ├── Красная.txt
+│   ├── Винишко.txt
+│   └── Двор.txt
+├── Подольская 39/
+│   ├── 1.txt ... 7.txt
+├── Черная Речка/       ← пока пусто
+└── Заозерная/          ← пока пусто
+```
+
+### Формат
+
+TXT или DOCX с плейсхолдерами `[НАЗВАНИЕ]`. Приоритет: `.docx` → `.txt`.
+
+DOCX: замена через python-docx (параграфы + таблицы).
+TXT: простой str.replace.
+Оба конвертируются в PDF через LibreOffice headless.
+
+---
 
 ## Установка и запуск
 
-### Вариант 1: Docker (рекомендуется для VPS)
-
-**Требования:** Docker + Docker Compose
+### Docker (рекомендуется для VPS)
 
 ```bash
-# 1. Клонировать проект
-git clone <repo-url>
-cd rent-contract-bot
-
-# 2. Создать .env файл
-cp .env.example .env
-nano .env
-# Вставить:
-#   TELEGRAM_BOT_TOKEN=ваш_токен_от_BotFather
-#   ANTHROPIC_API_KEY=ваш_ключ_от_console.anthropic.com
-
-# 3. Положить шаблоны договоров
-# Шаблоны уже в storage/templates/Подольская 38/ и Подольская 39/
-
-# 4. Заполнить данные квартир
-nano apartments.json
-# Указать адреса, площади, описи имущества для каждой квартиры
-
-# 5. Запуск
+git clone <repo-url> && cd rent-contract-bot
+cp .env.example .env && nano .env   # вставить токены
 docker-compose up -d
-
-# Логи
-docker-compose logs -f
-
-# Остановка
-docker-compose down
+docker-compose logs -f              # логи
 ```
 
-### Вариант 2: Ручная установка
-
-**Требования:**
-- Python 3.10+
-- LibreOffice (для конвертации PDF)
-
-#### Linux (Ubuntu 22.04+)
+### Ручная установка (Windows)
 
 ```bash
-# 1. Установить LibreOffice + шрифты
-sudo apt update
-sudo apt install -y libreoffice-core libreoffice-writer \
-    fonts-crosextra-carlito fonts-crosextra-caladea
-
-# 2. Клонировать и настроить
-git clone <repo-url>
-cd rent-contract-bot
-python3 -m venv venv
-source venv/bin/activate
 pip install -r requirements.txt
-
-# 3. Настроить .env
-cp .env.example .env
-nano .env
-
-# 4. Заполнить apartments.json
-nano apartments.json
-
-# 5. Проверить LibreOffice
-python scripts/verify_libreoffice.py
-
-# 6. Запуск
+copy .env.example .env              # вставить токены
 python main.py
 ```
 
-#### Windows
+### Ручная установка (Linux)
 
 ```bash
-# 1. Установить LibreOffice: https://www.libreoffice.org/download/
-# 2. Установить Python 3.10+: https://python.org
-
-# 3. Настроить проект
-git clone <repo-url>
-cd rent-contract-bot
-python -m venv venv
-venv\Scripts\activate
+sudo apt install -y libreoffice-core libreoffice-writer fonts-crosextra-carlito fonts-crosextra-caladea
+python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-
-# 4. Настроить .env
-copy .env.example .env
-# Отредактировать .env — вставить токены
-
-# 5. Запуск
+cp .env.example .env && nano .env
+python scripts/verify_libreoffice.py  # проверка
 python main.py
 ```
 
-### Запуск как сервис на VPS (systemd)
-
-```bash
-# Создать файл сервиса
-sudo nano /etc/systemd/system/rent-bot.service
-```
+### systemd сервис
 
 ```ini
 [Unit]
@@ -159,241 +340,111 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-```bash
-# Активировать и запустить
-sudo systemctl daemon-reload
-sudo systemctl enable rent-bot
-sudo systemctl start rent-bot
-
-# Статус и логи
-sudo systemctl status rent-bot
-sudo journalctl -u rent-bot -f
-```
+---
 
 ## Получение токенов
 
-### Telegram Bot Token
+### Telegram: @BotFather → /newbot → скопировать токен → .env TELEGRAM_BOT_TOKEN
+### Anthropic: console.anthropic.com → API Keys → Create → .env ANTHROPIC_API_KEY ($5 минимум, $0.01/договор)
 
-1. Откройте Telegram, найдите **@BotFather**
-2. Отправьте `/newbot`
-3. Введите имя бота (например, "Договоры аренды")
-4. Введите username (например, `rent_contract_bot`)
-5. Скопируйте токен в `.env` → `TELEGRAM_BOT_TOKEN`
+---
 
-### Anthropic API Key
-
-1. Зайдите на [console.anthropic.com](https://console.anthropic.com)
-2. Создайте аккаунт / войдите
-3. Settings → API Keys → Create Key
-4. Скопируйте ключ в `.env` → `ANTHROPIC_API_KEY`
-5. Пополните баланс (минимум $5, одно распознавание ≈ $0.01)
-
-## Использование бота
-
-### Создание договора (`/start`)
-
-1. **Выбор группы** — Подольская 39 или Подольская 38
-2. **Выбор квартиры** — из списка кнопок
-3. **Дата договора** — выбор через инлайн-календарь
-4. **Дата Акта** — выбор через инлайн-календарь
-5. **Срок договора** — в днях (например, 365)
-6. **Сумма аренды** — ежемесячная (например, 50000)
-7. **Депозит** — сумма + способ внесения (единовременно / 50%+50%)
-8. **Телефон** — в любом формате
-9. **Email** — электронная почта арендатора
-10. **Telegram** — username арендатора
-11. **Проживающие** — "1 человек" или "Совместное" (с OCR паспортов)
-12. **Доп. условия** — "Нет" или ввести текст
-13. **Паспорт арендатора** — 2 фото как файлы (не как фотографии!)
-14. **Проверка OCR** — подтвердить / исправить / переснять
-15. **Генерация** — PDF создаётся и отправляется в чат
-
-### История договоров (`/history`)
-
-Год → Месяц → Список договоров → Нажмите на договор чтобы получить PDF
-
-### Статистика (`/stats`)
-
-Общее количество, разбивка по группам квартир и по месяцам текущего года.
-
-### Отмена (`/cancel`)
-
-Отменяет создание договора на любом этапе.
-
-## Настройка шаблонов
-
-### Формат шаблонов
-
-Шаблоны — TXT-файлы с плейсхолдерами в квадратных скобках:
+## Версии (git tags)
 
 ```
-ДОГОВОР № [НОМЕР_ДОГОВОРА]
-
-г. Санкт-Петербург                    «[ДАТА_ДОГОВОРА]» г.
-
-Гражданин РФ [ФИО_АРЕНДАТОРА], [ПОЛ], [ДАТА_РОЖДЕНИЯ] года рождения,
-паспорт [СЕРИЯ_ПАСПОРТА] [НОМЕР_ПАСПОРТА], выдан [КЕМ_ВЫДАН]...
+v1.0-working       — базовая рабочая версия
+v1.1-full-flow     — календарь, OCR редактирование, сожители, кнопки
+v1.2-history-stats — /history (год→месяц→PDF), /stats, OCR сожителей
+v1.3-multi-group   — 4 группы, PDF/DOCX выбор, до 5 сожителей
 ```
 
-### Доступные плейсхолдеры
+Откат: `git checkout v1.3-multi-group`
+Список: `git tag -l -n1`
 
-| Плейсхолдер | Источник | Описание |
-|-------------|----------|----------|
-| `[НОМЕР_ДОГОВОРА]` | Авто | П38/4/220209 |
-| `[ДАТА_ДОГОВОРА]` | Диалог | 22.02.2026 |
-| `[ДАТА_АКТА]` | Диалог | 22.02.2026 |
-| `[ФИО_АРЕНДАТОРА]` | OCR | Полное ФИО |
-| `[ПОЛ]` | OCR | М или Ж |
-| `[ДАТА_РОЖДЕНИЯ]` | OCR | 11 марта 1986 |
-| `[МЕСТО_РОЖДЕНИЯ]` | OCR | г. Ленинград |
-| `[СЕРИЯ_ПАСПОРТА]` | OCR | 4025 |
-| `[НОМЕР_ПАСПОРТА]` | OCR | 102574 |
-| `[ДАТА_ВЫДАЧИ]` | OCR | 19 апреля 2025 |
-| `[КЕМ_ВЫДАН]` | OCR | ГУ МВД по СПб... |
-| `[КОД_ПОДРАЗДЕЛЕНИЯ]` | OCR | 780-001 |
-| `[АДРЕС_РЕГИСТРАЦИИ]` | OCR | Полный адрес |
-| `[ТЕЛЕФОН]` | Диалог | +79119269045 |
-| `[EMAIL]` | Диалог | email@example.com |
-| `[ТЕЛЕГРАМ]` | Диалог | @username |
-| `[СУММА_АРЕНДЫ]` | Диалог | 50000 |
-| `[СУММА_АРЕНДЫ_ПРОПИСЬЮ]` | Авто | пятьдесят тысяч |
-| `[ДЕПОЗИТ]` | Диалог | 50000 |
-| `[ДЕПОЗИТ_ПРОПИСЬЮ]` | Авто | пятьдесят тысяч |
-| `[УСЛОВИЕ_ДЕПОЗИТ_НА_2_ЧАСТИ]` | Авто | Текст условия или пусто |
-| `[ДЕНЬ_ОПЛАТЫ_ЦИФРА]` | Авто | 22 |
-| `[ДЕНЬ_ОПЛАТЫ_ПРОПИСЬЮ]` | Авто | двадцать второго |
-| `[АДРЕС_КВАРТИРЫ]` | apartments.json | Из данных квартиры |
-| `[КОЛИЧЕСТВО_КОМНАТ]` | apartments.json | Из данных квартиры |
-| `[ПЛОЩАДЬ]` | apartments.json | Из данных квартиры |
-| `[ОПИСЬ_ИМУЩЕСТВА]` | apartments.json | Из данных квартиры |
-| `[СПИСОК_ПРОЖИВАЮЩИХ]` | Диалог/OCR | ФИО + паспорт сожителей |
-| `[СРОК_ДОГОВОРА]` | Диалог | В днях |
-| `[ДОП_УСЛОВИЯ]` | Диалог | Текст или "Нет" |
+---
 
-### Расположение шаблонов
+## Известные особенности и решения
 
-```
-storage/templates/
-├── Подольская 38/
-│   ├── Моя.txt        ← квартира "Моя"
-│   ├── Синяя.txt      ← квартира "Синяя"
-│   ├── Зеленая.txt
-│   ├── Эркер.txt
-│   ├── Оранжевая.txt
-│   ├── Красная.txt
-│   ├── Винишко.txt
-│   └── Двор.txt
-└── Подольская 39/
-    ├── 1.txt          ← квартира 1
-    ├── 2.txt
-    ├── 3.txt
-    ├── 4.txt
-    ├── 5.txt
-    ├── 6.txt
-    └── 7.txt
-```
+### LibreOffice на Windows
+Бот ищет `soffice.exe` в `C:/Program Files/LibreOffice/program/`. Если путь другой — обновить `_find_libreoffice()` в `document_service.py`.
 
-### Настройка apartments.json
+### Паспорт как файл, не фото
+Telegram сжимает фотографии до ~0.87 JPEG. Паспорт нужно отправлять через 📎 → Файл, иначе OCR будет неточным. Бот показывает предупреждение если отправили как фото.
 
-Каждая квартира имеет фиксированные данные:
+### Валидация телефона отключена
+Телефон принимается в любом формате (без валидации). Phone и email валидаторы возвращают str на оба случая — в conversation.py используется regex вместо isinstance.
 
-```json
-{
-  "Подольская 38": {
-    "_short": "П38",
-    "Моя": {
-      "contract_num": "1",
-      "address": "г. Санкт-Петербург, ул. Подольская, д. 38, кв. 1",
-      "rooms": "1",
-      "area": "25",
-      "inventory": "Кровать, шкаф, стол, стулья 2 шт, холодильник..."
-    }
-  }
-}
-```
+### PicklePersistence
+Состояние диалогов сохраняется в `storage/conversation_state.pkl`. При изменении FSM-состояний нужно удалять этот файл (`rm storage/conversation_state.pkl`).
 
-- `_short` — короткий код группы для номера договора (П38, П39)
-- `contract_num` — номер квартиры в номере договора
-- `address` — полный адрес для шаблона
-- `rooms` — количество комнат
-- `area` — площадь в м²
-- `inventory` — опись имущества
+### concurrent_updates=False
+Обязательно — без этого ConversationHandler ломается при параллельных сообщениях.
 
-## Формат номера договора
+---
 
-```
-П38/4/220209
- │   │  │
- │   │  └── Дата: 22.02.2009 → 220209 (ДДММГГ)
- │   └───── Квартира: Эркер → 4 (из contract_num)
- └───────── Группа: Подольская 38 → П38 (из _short)
-```
+## Стоимость
 
-## Стоимость работы
-
-| Компонент | Стоимость |
-|-----------|-----------|
+| Компонент | Цена |
+|-----------|------|
 | Telegram Bot API | Бесплатно |
 | LibreOffice | Бесплатно |
-| Claude Vision OCR | ~$0.01 за договор (~1 руб) |
-| **VPS (опционально)** | **от $5/мес** |
+| Claude Vision OCR | ~$0.01/договор |
+| VPS (опционально) | от $5/мес |
 
-100 договоров ≈ $1. Основные расходы — VPS.
+---
 
-## Структура файлов проекта
+## Структура файлов
 
 ```
 rent-contract-bot/
-├── main.py                          # Точка входа
-├── config.py                        # Конфигурация
-├── models.py                        # Модели данных
-├── database.py                      # Работа с БД
-├── document_service.py              # Генерация документов
-├── ocr_service.py                   # Распознавание паспортов
-├── validators.py                    # Валидация ввода
-├── logger.py                        # Логирование
+├── main.py                          # Точка входа (54 строки)
+├── config.py                        # Конфигурация (40)
+├── models.py                        # Модели данных (105)
+├── database.py                      # Async DB (171)
+├── document_service.py              # Генерация документов (376)
+├── ocr_service.py                   # Распознавание паспортов (218)
+├── validators.py                    # Валидация ввода (65)
+├── logger.py                        # Логирование (46)
 ├── apartments.json                  # Данные квартир
 ├── requirements.txt                 # Зависимости
-├── .env.example                     # Пример конфигурации
+├── .env.example                     # Шаблон конфигурации
 ├── Dockerfile                       # Docker-образ
 ├── docker-compose.yml               # Docker Compose
 ├── bot/
 │   └── handlers/
-│       ├── conversation.py          # FSM-диалог (24 состояния)
-│       ├── history.py               # /history
-│       └── stats.py                 # /stats
+│       ├── conversation.py          # FSM-диалог (1043 строки, 25 состояний)
+│       ├── history.py               # /history (159)
+│       └── stats.py                 # /stats (39)
 ├── scripts/
-│   ├── create_templates.py          # Генерация DOCX-шаблонов
+│   ├── create_templates.py          # Генерация DOCX-шаблонов (не используется)
 │   └── verify_libreoffice.py        # Проверка LibreOffice
 ├── storage/
-│   ├── templates/                   # Шаблоны договоров (.txt)
-│   ├── contracts/                   # Сгенерированные PDF
+│   ├── templates/                   # Шаблоны договоров (.txt/.docx)
+│   │   ├── Подольская 38/ (8 квартир)
+│   │   ├── Подольская 39/ (7 квартир)
+│   │   ├── Черная Речка/  (пусто)
+│   │   └── Заозерная/     (пусто)
+│   ├── contracts/                   # Сгенерированные PDF + TXT/DOCX
 │   ├── logs/                        # Логи бота
-│   ├── contracts.db                 # SQLite база данных
+│   ├── contracts.db                 # SQLite БД
 │   └── conversation_state.pkl       # Состояние диалогов
-└── tests/                           # Тесты
+└── tests/                           # 76 тестов
+    ├── test_validators.py           # 26 тестов валидаторов
+    ├── test_database.py             # 4 теста БД
+    ├── test_models.py               # 5 тестов моделей
+    ├── test_document_service.py     # 8 тестов документов
+    ├── test_ocr_service.py          # 15 тестов OCR
+    ├── test_conversation.py         # 13 тестов FSM
+    ├── test_integration.py          # 6 интеграционных
+    └── fixtures/
+        └── contract_template_test.docx
 ```
 
-## Решение проблем
+## TODO (не реализовано)
 
-### Бот не отвечает
-- Проверьте `.env` — токены заполнены?
-- `docker-compose logs` или `cat storage/logs/bot.log`
-
-### PDF не создаётся
-- LibreOffice установлен? `libreoffice --version` или `soffice --version`
-- На Linux: `python scripts/verify_libreoffice.py`
-- Шрифты установлены? `apt install fonts-crosextra-carlito fonts-crosextra-caladea`
-
-### OCR плохо распознаёт
-- Отправляйте паспорт как **файл** (📎 → Файл), не как фотографию
-- Фото должно быть чётким, без бликов
-- После распознавания нажмите "Нет, исправить" и поправьте нужные поля
-
-### Ошибка "Договор с таким номером уже существует"
-- Нельзя создать два договора с одинаковым номером (группа + квартира + дата)
-- Создайте договор с другой датой или начните заново
-
-## Лицензия
-
-Проект для личного использования.
+- [ ] Заполнить apartments.json реальными данными (адреса, площади, описи)
+- [ ] Добавить квартиры для Черная Речка и Заозерная
+- [ ] Положить шаблоны для новых групп
+- [ ] Протестировать на Linux с LibreOffice (PDF генерация)
+- [ ] Деплой на VPS
+- [ ] Конвертация TXT → DOCX (сейчас если шаблон .txt, выдаёт .txt при выборе "DOCX")
