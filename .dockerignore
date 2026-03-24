@@ -1,0 +1,13 @@
+.git
+.planning
+.claude
+__pycache__
+*.pyc
+venv
+.env
+storage/contracts
+storage/logs
+storage/*.db
+storage/*.pkl
+bot_output.log
+tests
