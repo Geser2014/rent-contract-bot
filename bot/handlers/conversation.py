@@ -7,7 +7,6 @@ import datetime
 import logging
 import re
 import subprocess
-from pathlib import Path
 from decimal import Decimal
 
 import anthropic
@@ -60,8 +59,7 @@ logger = logging.getLogger(__name__)
     CONFIRM_OCR,
     EDIT_FIELD,
     CONFIRM,
-    PREVIEW_PDF,
-) = range(25)
+) = range(24)
 
 
 # ---------------------------------------------------------------------------
@@ -897,52 +895,9 @@ async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return ConversationHandler.END
 
     contract_data.pdf_path = pdf_path
-    context.user_data["contract_data"] = contract_data
     logger.info("PDF generated: %s", pdf_path)
 
-    # Send PDF preview with approve/redo buttons
-    chat_id = query.message.chat_id
-    keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("Всё верно ✅", callback_data="pdf_approve"),
-            InlineKeyboardButton("Переделать 🔄", callback_data="pdf_redo"),
-        ]
-    ])
-    with open(pdf_path, "rb") as pdf_file:
-        await context.bot.send_document(
-            chat_id=chat_id,
-            document=pdf_file,
-            filename=f"Договор_{contract_number.replace('/', '_')}.pdf",
-            caption=f"📄 Превью договора №{contract_number}\nПроверьте и подтвердите:",
-            reply_markup=keyboard,
-        )
-    return PREVIEW_PDF
-
-
-async def handle_preview_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle approve/redo after PDF preview."""
-    query = update.callback_query
-    await query.answer()
-
-    if query.data == "pdf_redo":
-        # Delete generated PDF
-        contract_data = context.user_data.get("contract_data")
-        if contract_data and contract_data.pdf_path:
-            pdf = Path(contract_data.pdf_path)
-            if pdf.exists():
-                pdf.unlink()
-                logger.info("Deleted rejected PDF: %s", pdf)
-        context.user_data.clear()
-        await context.bot.send_message(
-            chat_id=query.message.chat_id,
-            text="Договор отклонён. Начните заново: /start",
-        )
-        return ConversationHandler.END
-
-    # pdf_approve — save to DB
-    contract_data = context.user_data["contract_data"]
-    contract_number = contract_data.contract_number
-
+    # Save to database
     try:
         row_id = await database.save_contract(contract_data)
     except IntegrityError as exc:
@@ -955,10 +910,15 @@ async def handle_preview_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return ConversationHandler.END
     logger.info("Contract saved to DB: id=%d contract_number=%s", row_id, contract_number)
 
-    await context.bot.send_message(
-        chat_id=query.message.chat_id,
-        text=f"✅ Договор №{contract_number} сохранён!",
-    )
+    # Send PDF to user
+    chat_id = query.message.chat_id
+    with open(pdf_path, "rb") as pdf_file:
+        await context.bot.send_document(
+            chat_id=chat_id,
+            document=pdf_file,
+            filename=f"Договор_{contract_number.replace('/', '_')}.pdf",
+            caption=f"Договор аренды №{contract_number} готов.",
+        )
 
     context.user_data.clear()
     return ConversationHandler.END
@@ -1035,7 +995,6 @@ def build_conversation_handler() -> ConversationHandler:
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_edit_field_text),
             ],
             CONFIRM:          [CallbackQueryHandler(handle_confirm)],
-            PREVIEW_PDF:      [CallbackQueryHandler(handle_preview_pdf)],
         },
         fallbacks=[
             CommandHandler("cancel", cmd_cancel),
