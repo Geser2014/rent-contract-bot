@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 03-document-generation-03-01-PLAN.md
-last_updated: "2026-03-24T07:36:32.074Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 03-document-generation-03-02-PLAN.md
+last_updated: "2026-03-24T07:40:03.381Z"
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -51,6 +51,7 @@ Plan: 2 of 2
 | Phase 02-validation-and-data-layer P01 | 1 | 2 tasks | 3 files |
 | Phase 02-validation-and-data-layer P02 | 3 | 2 tasks | 5 files |
 | Phase 03-document-generation P01 | 3 | 2 tasks | 7 files |
+| Phase 03-document-generation P02 | 8 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,7 @@ Recent decisions affecting current work:
 - [Phase 03-document-generation]: docxtpl used for DOCX fill — solves XML run-splitting that defeats raw python-docx
 - [Phase 03-document-generation]: Same-day contract number collision detection deferred to Phase 6 — UNIQUE constraint surfaces duplicates at save time
 - [Phase 03-document-generation]: One DOCX template per group (Г39/Г38), not per apartment — path is TEMPLATES_DIR/group/contract_template.docx
+- [Phase 03-document-generation]: TestPdfConversion tests verified DOC-03 contract: RuntimeError on no-output, finally-block cleanup confirmed, integration test skipped on dev via skipif(shutil.which)
 
 ### Pending Todos
 
@@ -86,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T07:36:32.071Z
-Stopped at: Completed 03-document-generation-03-01-PLAN.md
+Last session: 2026-03-24T07:40:03.378Z
+Stopped at: Completed 03-document-generation-03-02-PLAN.md
 Resume file: None

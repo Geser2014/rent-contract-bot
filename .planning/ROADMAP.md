@@ -65,7 +65,7 @@ Plans:
 
 Plans:
 - [x] 03-01-PLAN.md — DOCX templates (Г39 + Г38 + test fixture) + document_service.py contract number generation and template fill
-- [ ] 03-02-PLAN.md — LibreOffice PDF conversion, temp file cleanup, full generate_contract() async orchestrator
+- [x] 03-02-PLAN.md — LibreOffice PDF conversion, temp file cleanup, full generate_contract() async orchestrator
 
 ### Phase 4: OCR Service
 **Goal**: Given two passport image files, the service returns a structured dict of all required passport fields, or flags specific fields as UNCLEAR for human correction
