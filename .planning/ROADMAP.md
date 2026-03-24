@@ -77,8 +77,11 @@ Plans:
   3. A low-quality or ambiguous field is returned as `UNCLEAR` rather than a guessed value
   4. The extracted data is displayed to the user in a readable summary for confirmation
   5. The user can confirm the data or reject it to restart the passport upload step
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — ocr_service.py: AsyncAnthropic tool_use call, image resize, UNCLEAR detection, summary formatter
+- [ ] 04-02-PLAN.md — tests/test_ocr_service.py: unit tests for all pure functions and mocked async path
 
 ### Phase 5: FSM Dialog Layer
 **Goal**: A user can navigate the complete contract creation dialog from group selection through confirmation, with all inputs validated inline and the ability to cancel at any point
@@ -114,6 +117,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Infrastructure | 2/2 | Complete   | 2026-03-24 |
 | 2. Validation and Data Layer | 0/2 | Not started | - |
 | 3. Document Generation | 1/2 | In Progress|  |
-| 4. OCR Service | 0/? | Not started | - |
+| 4. OCR Service | 0/2 | Not started | - |
 | 5. FSM Dialog Layer | 0/? | Not started | - |
 | 6. Integration and Error Handling | 0/? | Not started | - |
