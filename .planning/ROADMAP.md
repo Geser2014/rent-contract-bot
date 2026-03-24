@@ -61,7 +61,11 @@ Plans:
   2. A DOCX template for any apartment is filled with fixture data and all `{{ }}` placeholders are replaced
   3. The filled DOCX converts to a PDF that visually matches the template layout (fonts correct, no substitution artifacts)
   4. Temporary DOCX files are cleaned up after PDF conversion regardless of success or failure
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — DOCX templates (Г39 + Г38 + test fixture) + document_service.py contract number generation and template fill
+- [ ] 03-02-PLAN.md — LibreOffice PDF conversion, temp file cleanup, full generate_contract() async orchestrator
 
 ### Phase 4: OCR Service
 **Goal**: Given two passport image files, the service returns a structured dict of all required passport fields, or flags specific fields as UNCLEAR for human correction
@@ -109,7 +113,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Infrastructure | 2/2 | Complete   | 2026-03-24 |
 | 2. Validation and Data Layer | 0/2 | Not started | - |
-| 3. Document Generation | 0/? | Not started | - |
+| 3. Document Generation | 0/2 | Not started | - |
 | 4. OCR Service | 0/? | Not started | - |
 | 5. FSM Dialog Layer | 0/? | Not started | - |
 | 6. Integration and Error Handling | 0/? | Not started | - |
