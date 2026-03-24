@@ -111,7 +111,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Wire database.init() into main.py + extend handle_confirm: generate_contract + save_contract + send_document
+- [x] 06-01-PLAN.md — Wire database.init() into main.py + extend handle_confirm: generate_contract + save_contract + send_document
 - [ ] 06-02-PLAN.md — Error boundaries (OCR, PDF, DB) in conversation.py + tests/test_integration.py
 
 ## Progress

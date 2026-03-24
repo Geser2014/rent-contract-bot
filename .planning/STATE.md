@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-stopped_at: Completed 05-fsm-dialog-layer-05-02-PLAN.md
-last_updated: "2026-03-24T08:36:54.827Z"
+status: Ready to execute
+stopped_at: Completed 06-integration-and-error-handling-06-01-PLAN.md
+last_updated: "2026-03-24T08:55:54.178Z"
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 12
+  completed_plans: 11
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Полный цикл создания договора аренды за 2-3 минуты вместо 25-40 минут ручной работы
-**Current focus:** Phase 05 — fsm-dialog-layer
+**Current focus:** Phase 06 — integration-and-error-handling
 
 ## Current Position
 
-Phase: 6
-Plan: Not started
+Phase: 06 (integration-and-error-handling) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Plan: Not started
 | Phase 04-ocr-service P02 | 5 | 1 tasks | 1 files |
 | Phase 05-fsm-dialog-layer P01 | 2 | 1 tasks | 3 files |
 | Phase 05-fsm-dialog-layer P02 | 3 | 2 tasks | 3 files |
+| Phase 06-integration-and-error-handling P01 | 1 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,9 @@ Recent decisions affecting current work:
 - [Phase 05-fsm-dialog-layer]: handle_unexpected returns None (not END) to stay in current state; passport bytes popped after OCR to prevent PicklePersistence bloat
 - [Phase 05-fsm-dialog-layer]: re.fullmatch used in handle_phone/handle_email instead of isinstance(str) since validate_phone/validate_email return str for both valid output and error
 - [Phase 05-fsm-dialog-layer]: concurrent_updates=False required for ConversationHandler; PicklePersistence initialized from config.PERSISTENCE_PATH for FSM state persistence across restarts
+- [Phase 06-integration-and-error-handling]: Used ApplicationBuilder.post_init() hook for database.init() — correct async startup pattern inside python-telegram-bot event loop
+- [Phase 06-integration-and-error-handling]: contract_data.pdf_path set before save_contract() so DB record always has actual PDF path, not null
+- [Phase 06-integration-and-error-handling]: context.user_data.clear() at end of confirm path prevents PicklePersistence bloat from storing ContractData across restarts
 
 ### Pending Todos
 
@@ -99,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T08:33:44.996Z
-Stopped at: Completed 05-fsm-dialog-layer-05-02-PLAN.md
+Last session: 2026-03-24T08:55:54.175Z
+Stopped at: Completed 06-integration-and-error-handling-06-01-PLAN.md
 Resume file: None

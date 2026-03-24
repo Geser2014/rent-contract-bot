@@ -39,7 +39,7 @@
 - [x] **DOC-01**: Система генерирует номер договора в формате группа/квартира/дата
 - [x] **DOC-02**: Система заполняет DOCX-шаблон данными из диалога и OCR
 - [x] **DOC-03**: Система конвертирует заполненный DOCX в PDF через LibreOffice headless
-- [ ] **DOC-04**: Система отправляет готовый PDF в Telegram-чат как документ
+- [x] **DOC-04**: Система отправляет готовый PDF в Telegram-чат как документ
 
 ### Database
 
@@ -106,7 +106,7 @@
 | DOC-01 | Phase 3 | Complete |
 | DOC-02 | Phase 3 | Complete |
 | DOC-03 | Phase 3 | Complete |
-| DOC-04 | Phase 6 | Pending |
+| DOC-04 | Phase 6 | Complete |
 | DB-01 | Phase 2 | Complete |
 | DB-02 | Phase 2 | Complete |
 | INFR-01 | Phase 1 | Complete |
