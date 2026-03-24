@@ -65,7 +65,7 @@ class Contract(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime, default=datetime.datetime.utcnow, nullable=False
+        DateTime(timezone=True), default=lambda: datetime.datetime.now(datetime.UTC), nullable=False
     )
 
     # Contract metadata
