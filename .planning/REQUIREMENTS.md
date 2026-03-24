@@ -83,43 +83,43 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DIAL-01 | TBD | Pending |
-| DIAL-02 | TBD | Pending |
-| DIAL-03 | TBD | Pending |
-| DIAL-04 | TBD | Pending |
-| DIAL-05 | TBD | Pending |
-| DIAL-06 | TBD | Pending |
-| DIAL-07 | TBD | Pending |
-| DIAL-08 | TBD | Pending |
-| DIAL-09 | TBD | Pending |
-| VALD-01 | TBD | Pending |
-| VALD-02 | TBD | Pending |
-| VALD-03 | TBD | Pending |
-| VALD-04 | TBD | Pending |
-| VALD-05 | TBD | Pending |
-| VALD-06 | TBD | Pending |
-| OCR-01 | TBD | Pending |
-| OCR-02 | TBD | Pending |
-| OCR-03 | TBD | Pending |
-| OCR-04 | TBD | Pending |
-| OCR-05 | TBD | Pending |
-| DOC-01 | TBD | Pending |
-| DOC-02 | TBD | Pending |
-| DOC-03 | TBD | Pending |
-| DOC-04 | TBD | Pending |
-| DB-01 | TBD | Pending |
-| DB-02 | TBD | Pending |
-| INFR-01 | TBD | Pending |
-| INFR-02 | TBD | Pending |
-| INFR-03 | TBD | Pending |
-| INFR-04 | TBD | Pending |
-| INFR-05 | TBD | Pending |
+| DIAL-01 | Phase 5 | Pending |
+| DIAL-02 | Phase 5 | Pending |
+| DIAL-03 | Phase 5 | Pending |
+| DIAL-04 | Phase 5 | Pending |
+| DIAL-05 | Phase 5 | Pending |
+| DIAL-06 | Phase 5 | Pending |
+| DIAL-07 | Phase 5 | Pending |
+| DIAL-08 | Phase 5 | Pending |
+| DIAL-09 | Phase 5 | Pending |
+| VALD-01 | Phase 2 | Pending |
+| VALD-02 | Phase 2 | Pending |
+| VALD-03 | Phase 2 | Pending |
+| VALD-04 | Phase 2 | Pending |
+| VALD-05 | Phase 2 | Pending |
+| VALD-06 | Phase 2 | Pending |
+| OCR-01 | Phase 4 | Pending |
+| OCR-02 | Phase 4 | Pending |
+| OCR-03 | Phase 4 | Pending |
+| OCR-04 | Phase 4 | Pending |
+| OCR-05 | Phase 4 | Pending |
+| DOC-01 | Phase 3 | Pending |
+| DOC-02 | Phase 3 | Pending |
+| DOC-03 | Phase 3 | Pending |
+| DOC-04 | Phase 6 | Pending |
+| DB-01 | Phase 2 | Pending |
+| DB-02 | Phase 2 | Pending |
+| INFR-01 | Phase 1 | Pending |
+| INFR-02 | Phase 5 | Pending |
+| INFR-03 | Phase 5 | Pending |
+| INFR-04 | Phase 1 | Pending |
+| INFR-05 | Phase 6 | Pending |
 
 **Coverage:**
 - v1 requirements: 31 total
-- Mapped to phases: 0
-- Unmapped: 31 ⚠️
+- Mapped to phases: 31
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-03-24 after initial definition*
+*Last updated: 2026-03-24 after roadmap creation*
