@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.env
+*.db
+storage/contracts/
+storage/logs/
+*.pdf
+*.docx
+!storage/templates/**/*.docx
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
