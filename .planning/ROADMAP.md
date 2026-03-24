@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Infrastructure** - Project scaffold, dependencies, environment config, LibreOffice verified (completed 2026-03-24)
 - [ ] **Phase 2: Validation and Data Layer** - Pydantic validators, SQLAlchemy models, ContractData dataclass
 - [ ] **Phase 3: Document Generation** - DOCX template fill, LibreOffice PDF conversion, file management
-- [ ] **Phase 4: OCR Service** - Claude Vision passport extraction, UNCLEAR handling, field validation
+- [x] **Phase 4: OCR Service** - Claude Vision passport extraction, UNCLEAR handling, field validation (completed 2026-03-24)
 - [ ] **Phase 5: FSM Dialog Layer** - ConversationHandler, all states, inline keyboards, /cancel
 - [ ] **Phase 6: Integration and Error Handling** - main.py wiring, error boundaries, logging, end-to-end test
 
@@ -81,7 +81,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md — ocr_service.py: AsyncAnthropic tool_use call, image resize, UNCLEAR detection, summary formatter
-- [ ] 04-02-PLAN.md — tests/test_ocr_service.py: unit tests for all pure functions and mocked async path
+- [x] 04-02-PLAN.md — tests/test_ocr_service.py: unit tests for all pure functions and mocked async path
 
 ### Phase 5: FSM Dialog Layer
 **Goal**: A user can navigate the complete contract creation dialog from group selection through confirmation, with all inputs validated inline and the ability to cancel at any point
@@ -117,6 +117,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Infrastructure | 2/2 | Complete   | 2026-03-24 |
 | 2. Validation and Data Layer | 0/2 | Not started | - |
 | 3. Document Generation | 1/2 | In Progress|  |
-| 4. OCR Service | 0/2 | Not started | - |
+| 4. OCR Service | 2/2 | Complete   | 2026-03-24 |
 | 5. FSM Dialog Layer | 0/? | Not started | - |
 | 6. Integration and Error Handling | 0/? | Not started | - |

@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 04-ocr-service-04-01-PLAN.md
-last_updated: "2026-03-24T08:01:55.859Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 04-ocr-service-04-02-PLAN.md
+last_updated: "2026-03-24T08:04:50.873Z"
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -53,6 +53,7 @@ Plan: 2 of 2
 | Phase 03-document-generation P01 | 3 | 2 tasks | 7 files |
 | Phase 03-document-generation P02 | 8 | 1 tasks | 2 files |
 | Phase 04-ocr-service P01 | 2 | 1 tasks | 1 files |
+| Phase 04-ocr-service P02 | 5 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,7 @@ Recent decisions affecting current work:
 - [Phase 03-document-generation]: TestPdfConversion tests verified DOC-03 contract: RuntimeError on no-output, finally-block cleanup confirmed, integration test skipped on dev via skipif(shutil.which)
 - [Phase 04-ocr-service]: Module-level AsyncAnthropic singleton in ocr_service.py — not per-call — avoids unnecessary object creation
 - [Phase 04-ocr-service]: tool_use with forced tool_choice used for Claude OCR — not prompt-only JSON — for deterministic structured passport output
+- [Phase 04-ocr-service]: asyncio_mode=auto already configured in pyproject.toml — no @pytest.mark.asyncio decorators needed in test_ocr_service.py
 
 ### Pending Todos
 
@@ -91,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T08:01:55.856Z
-Stopped at: Completed 04-ocr-service-04-01-PLAN.md
+Last session: 2026-03-24T08:04:50.870Z
+Stopped at: Completed 04-ocr-service-04-02-PLAN.md
 Resume file: None
