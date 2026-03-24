@@ -15,8 +15,13 @@ _log = get_logger(__name__)
 
 
 async def _post_init(application: Application) -> None:
-    """Initialize database tables before the bot starts polling."""
+    """Initialize database tables and set bot commands before polling."""
     await database.init()
+    from telegram import BotCommand
+    await application.bot.set_my_commands([
+        BotCommand("start", "Создать договор аренды"),
+        BotCommand("cancel", "Отменить создание договора"),
+    ])
 
 
 def main() -> None:
