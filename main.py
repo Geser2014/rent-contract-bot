@@ -1,7 +1,4 @@
 """Rent Contract Bot — entry point."""
-import sys
-from pathlib import Path
-
 from dotenv import load_dotenv
 
 # Load .env FIRST — before any other imports that read env vars
