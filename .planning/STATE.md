@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 06-integration-and-error-handling-06-01-PLAN.md
-last_updated: "2026-03-24T08:55:54.178Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 06-integration-and-error-handling-06-02-PLAN.md
+last_updated: "2026-03-24T08:59:32.982Z"
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -57,6 +57,7 @@ Plan: 2 of 2
 | Phase 05-fsm-dialog-layer P01 | 2 | 1 tasks | 3 files |
 | Phase 05-fsm-dialog-layer P02 | 3 | 2 tasks | 3 files |
 | Phase 06-integration-and-error-handling P01 | 1 | 2 tasks | 2 files |
+| Phase 06-integration-and-error-handling P02 | 2 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,9 @@ Recent decisions affecting current work:
 - [Phase 06-integration-and-error-handling]: Used ApplicationBuilder.post_init() hook for database.init() — correct async startup pattern inside python-telegram-bot event loop
 - [Phase 06-integration-and-error-handling]: contract_data.pdf_path set before save_contract() so DB record always has actual PDF path, not null
 - [Phase 06-integration-and-error-handling]: context.user_data.clear() at end of confirm path prevents PicklePersistence bloat from storing ContractData across restarts
+- [Phase 06-integration-and-error-handling]: OCR error returns PASSPORT_PAGE1 (not END) so user can retry with clearer photo without restarting entire conversation
+- [Phase 06-integration-and-error-handling]: DB IntegrityError uses send_message not edit_message_text to avoid message edit conflicts after generate step
+- [Phase 06-integration-and-error-handling]: context.user_data.clear() on all error paths returning END prevents stale partial state in PicklePersistence
 
 ### Pending Todos
 
@@ -103,6 +107,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T08:55:54.175Z
-Stopped at: Completed 06-integration-and-error-handling-06-01-PLAN.md
+Last session: 2026-03-24T08:59:32.979Z
+Stopped at: Completed 06-integration-and-error-handling-06-02-PLAN.md
 Resume file: None

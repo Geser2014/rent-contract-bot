@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 3: Document Generation** - DOCX template fill, LibreOffice PDF conversion, file management
 - [x] **Phase 4: OCR Service** - Claude Vision passport extraction, UNCLEAR handling, field validation (completed 2026-03-24)
 - [x] **Phase 5: FSM Dialog Layer** - ConversationHandler, all states, inline keyboards, /cancel (completed 2026-03-24)
-- [ ] **Phase 6: Integration and Error Handling** - main.py wiring, error boundaries, logging, end-to-end test
+- [x] **Phase 6: Integration and Error Handling** - main.py wiring, error boundaries, logging, end-to-end test (completed 2026-03-24)
 
 ## Phase Details
 
@@ -112,7 +112,7 @@ Plans:
 
 Plans:
 - [x] 06-01-PLAN.md — Wire database.init() into main.py + extend handle_confirm: generate_contract + save_contract + send_document
-- [ ] 06-02-PLAN.md — Error boundaries (OCR, PDF, DB) in conversation.py + tests/test_integration.py
+- [x] 06-02-PLAN.md — Error boundaries (OCR, PDF, DB) in conversation.py + tests/test_integration.py
 
 ## Progress
 
@@ -126,4 +126,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Document Generation | 1/2 | In Progress|  |
 | 4. OCR Service | 2/2 | Complete   | 2026-03-24 |
 | 5. FSM Dialog Layer | 2/2 | Complete   | 2026-03-24 |
-| 6. Integration and Error Handling | 0/2 | Not started | - |
+| 6. Integration and Error Handling | 2/2 | Complete   | 2026-03-24 |
