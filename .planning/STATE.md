@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 02-validation-and-data-layer-01-PLAN.md
-last_updated: "2026-03-24T07:06:38.923Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 02-validation-and-data-layer-02-PLAN.md
+last_updated: "2026-03-24T07:08:30.390Z"
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -49,6 +49,7 @@ Plan: 2 of 2
 | Phase 01-infrastructure P01 | 2 | 2 tasks | 10 files |
 | Phase 01-infrastructure P02 | 2 | 2 tasks | 5 files |
 | Phase 02-validation-and-data-layer P01 | 1 | 2 tasks | 3 files |
+| Phase 02-validation-and-data-layer P02 | 3 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,8 @@ Recent decisions affecting current work:
 - [Phase 01-infrastructure]: config.validate() placed inside main() not at module load — importing config does not trigger SystemExit
 - [Phase 02-validation-and-data-layer]: Result-style returns (value | str) instead of exceptions — callers use isinstance(result, str) for error detection in FSM states
 - [Phase 02-validation-and-data-layer]: stdlib only for validators (datetime, re, decimal) — no pydantic keeps validation layer dependency-free
+- [Phase 02-validation-and-data-layer]: Used _configure() hook in database.py to enable test isolation with in-memory SQLite
+- [Phase 02-validation-and-data-layer]: Fixed deprecated datetime.utcnow() — using timezone-aware datetime.now(datetime.UTC) for Python 3.12+
 
 ### Pending Todos
 
@@ -79,6 +82,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T07:06:38.920Z
-Stopped at: Completed 02-validation-and-data-layer-01-PLAN.md
+Last session: 2026-03-24T07:08:30.387Z
+Stopped at: Completed 02-validation-and-data-layer-02-PLAN.md
 Resume file: None

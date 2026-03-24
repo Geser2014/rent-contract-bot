@@ -50,7 +50,7 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — Validators (date, phone, email, amount, age) with TDD test suite
-- [ ] 02-02-PLAN.md — ContractData dataclass, Contract ORM model, database init and save
+- [x] 02-02-PLAN.md — ContractData dataclass, Contract ORM model, database init and save
 
 ### Phase 3: Document Generation
 **Goal**: Given a populated `ContractData` object, the system produces a correctly formatted PDF contract file without any Telegram interaction

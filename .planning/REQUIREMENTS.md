@@ -43,8 +43,8 @@
 
 ### Database
 
-- [ ] **DB-01**: Система сохраняет данные каждого договора в SQLite
-- [ ] **DB-02**: Запись содержит все поля: номер договора, группа, квартира, данные арендатора, даты, суммы, путь к PDF
+- [x] **DB-01**: Система сохраняет данные каждого договора в SQLite
+- [x] **DB-02**: Запись содержит все поля: номер договора, группа, квартира, данные арендатора, даты, суммы, путь к PDF
 
 ### Infrastructure
 
@@ -107,8 +107,8 @@
 | DOC-02 | Phase 3 | Pending |
 | DOC-03 | Phase 3 | Pending |
 | DOC-04 | Phase 6 | Pending |
-| DB-01 | Phase 2 | Pending |
-| DB-02 | Phase 2 | Pending |
+| DB-01 | Phase 2 | Complete |
+| DB-02 | Phase 2 | Complete |
 | INFR-01 | Phase 1 | Complete |
 | INFR-02 | Phase 5 | Pending |
 | INFR-03 | Phase 5 | Pending |
