@@ -100,3 +100,88 @@ class TestFillTemplate:
             assert "SPLIT:" not in combined, "Split paragraph present when deposit_split=False"
         finally:
             tmp.unlink(missing_ok=True)
+
+
+class TestPdfConversion:
+    """DOC-03: LibreOffice conversion + temp file cleanup."""
+
+    def test_convert_to_pdf_raises_when_no_output(self, tmp_path):
+        """_convert_to_pdf raises RuntimeError when LibreOffice exits 0 but produces no PDF."""
+        import document_service
+        from unittest.mock import patch, MagicMock
+
+        # Create a dummy DOCX input so the path exists
+        dummy_docx = tmp_path / "contract_dummy.docx"
+        dummy_docx.write_bytes(b"dummy")
+
+        # Mock subprocess.run — exit code 0 but we do NOT create the expected PDF
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = b""
+        mock_result.stderr = b""
+
+        with patch("document_service.subprocess.run", return_value=mock_result):
+            with pytest.raises(RuntimeError, match="no output"):
+                document_service._convert_to_pdf(dummy_docx, tmp_path)
+
+    def test_generate_contract_cleanup_on_failure(self, tmp_path):
+        """generate_contract deletes temp DOCX even when _convert_to_pdf raises."""
+        import asyncio
+        import document_service
+        from unittest.mock import patch
+
+        # Create a real temp file that _fill_template "returns"
+        sentinel_file = tmp_path / "contract_sentinel.docx"
+        sentinel_file.write_bytes(b"sentinel")
+
+        data = make_contract_data()
+
+        def fake_fill(template_path, context):
+            # Return a renamed copy of sentinel so generate_contract can rename it
+            return sentinel_file
+
+        with patch.object(document_service, "_fill_template", side_effect=fake_fill):
+            with patch.object(
+                document_service,
+                "_convert_to_pdf",
+                side_effect=RuntimeError("conversion failed"),
+            ):
+                with pytest.raises(RuntimeError, match="conversion failed"):
+                    asyncio.run(document_service.generate_contract(data))
+
+        # The renamed temp file must be cleaned up by the finally block
+        safe_name = data.contract_number.replace("/", "_")
+        renamed = sentinel_file.parent / f"{safe_name}.docx"
+        assert not renamed.exists(), "Temp DOCX not cleaned up after failure"
+
+    @pytest.mark.skipif(
+        shutil.which("libreoffice") is None,
+        reason="LibreOffice not installed — skipped on dev machine",
+    )
+    @pytest.mark.integration
+    def test_pdf_conversion_integration(self, tmp_path):
+        """Full generate_contract() pipeline: template fill -> LibreOffice PDF -> cleanup."""
+        import asyncio
+        import document_service
+
+        # Point config paths to tmp_path so we don't pollute storage/
+        import config as cfg
+        original_contracts_dir = cfg.CONTRACTS_DIR
+        cfg.CONTRACTS_DIR = tmp_path / "contracts"
+        cfg.CONTRACTS_DIR.mkdir(parents=True)
+
+        try:
+            data = make_contract_data()
+            pdf_path_str = asyncio.run(document_service.generate_contract(data))
+            pdf_path = Path(pdf_path_str)
+
+            assert pdf_path.exists(), f"PDF not produced: {pdf_path}"
+            assert pdf_path.suffix == ".pdf"
+            assert pdf_path.stat().st_size > 1024, "PDF is suspiciously small (<1 KB)"
+
+            # Temp DOCX must be gone
+            safe_name = data.contract_number.replace("/", "_")
+            tmp_docx = Path(tempfile.gettempdir()) / f"{safe_name}.docx"
+            assert not tmp_docx.exists(), "Temp DOCX was not cleaned up"
+        finally:
+            cfg.CONTRACTS_DIR = original_contracts_dir
