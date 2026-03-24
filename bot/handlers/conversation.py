@@ -52,13 +52,14 @@ logger = logging.getLogger(__name__)
     ROOMMATE_CONFIRM_OCR,
     ROOMMATE_EDIT_FIELD,
     ROOMMATE_MORE,
-    EXTRA_CONDITIONS,
+    EXTRA_CONDITIONS_CHOICE,
+    EXTRA_CONDITIONS_INPUT,
     PASSPORT_PAGE1,
     PASSPORT_PAGE2,
     CONFIRM_OCR,
     EDIT_FIELD,
     CONFIRM,
-) = range(23)
+) = range(24)
 
 
 # ---------------------------------------------------------------------------
@@ -278,9 +279,15 @@ async def handle_residents_choice(update: Update, context: ContextTypes.DEFAULT_
     if query.data == "residents_alone":
         context.user_data["residents"] = "Нет"
         await query.edit_message_text(
-            'Дополнительные условия?\n(Введите текст или "нет")'
+            "Дополнительные условия?",
+        reply_markup=InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("Нет", callback_data="extra_no"),
+                InlineKeyboardButton("Ввести", callback_data="extra_yes"),
+            ]
+        ])
         )
-        return EXTRA_CONDITIONS
+        return EXTRA_CONDITIONS_CHOICE
 
     # residents_with — start roommate passport scan
     await query.edit_message_text(
@@ -480,9 +487,15 @@ async def _save_roommate_and_ask_more(query, context: ContextTypes.DEFAULT_TYPE)
         context.user_data["residents"] = "; ".join(context.user_data["roommates"])
         await query.edit_message_text(
             f"✅ Записано {count} сожителя.\n\n"
-            'Дополнительные условия?\n(Введите текст или "нет")'
+            "Дополнительные условия?",
+        reply_markup=InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("Нет", callback_data="extra_no"),
+                InlineKeyboardButton("Ввести", callback_data="extra_yes"),
+            ]
+        ])
         )
-        return EXTRA_CONDITIONS
+        return EXTRA_CONDITIONS_CHOICE
 
     # Ask for more
     keyboard = [
@@ -515,18 +528,39 @@ async def handle_roommate_more(update: Update, context: ContextTypes.DEFAULT_TYP
     # No more
     context.user_data["residents"] = "; ".join(context.user_data["roommates"])
     await query.edit_message_text(
-        'Дополнительные условия?\n(Введите текст или "нет")'
+        "Дополнительные условия?",
+        reply_markup=InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("Нет", callback_data="extra_no"),
+                InlineKeyboardButton("Ввести", callback_data="extra_yes"),
+            ]
+        ])
     )
-    return EXTRA_CONDITIONS
+    return EXTRA_CONDITIONS_CHOICE
 
 
-async def handle_extra_conditions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Store extra conditions — ask for passport page 1."""
-    text = update.message.text.strip()
-    if text.lower() in ("нет", "нету", "-"):
+async def handle_extra_conditions_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle Нет/Ввести for extra conditions."""
+    query = update.callback_query
+    await query.answer()
+
+    if query.data == "extra_no":
         context.user_data["extra_conditions"] = "Нет"
-    else:
-        context.user_data["extra_conditions"] = text
+        await query.edit_message_text(
+            "Отправьте *первую страницу паспорта* арендатора как файл "
+            "(Прикрепить → Файл, не как фото):",
+            parse_mode="Markdown",
+        )
+        return PASSPORT_PAGE1
+
+    # extra_yes
+    await query.edit_message_text("Введите дополнительные условия:")
+    return EXTRA_CONDITIONS_INPUT
+
+
+async def handle_extra_conditions_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Store typed extra conditions — ask for passport."""
+    context.user_data["extra_conditions"] = update.message.text.strip()
     await update.message.reply_text(
         "Отправьте *первую страницу паспорта* арендатора как файл "
         "(Прикрепить → Файл, не как фото):",
@@ -946,7 +980,8 @@ def build_conversation_handler() -> ConversationHandler:
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_roommate_edit_field),
             ],
             ROOMMATE_MORE:    [CallbackQueryHandler(handle_roommate_more)],
-            EXTRA_CONDITIONS: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_extra_conditions)],
+            EXTRA_CONDITIONS_CHOICE: [CallbackQueryHandler(handle_extra_conditions_choice)],
+            EXTRA_CONDITIONS_INPUT:  [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_extra_conditions_input)],
             PASSPORT_PAGE1: [
                 MessageHandler(filters.Document.ALL, handle_passport_page1),
                 MessageHandler(filters.PHOTO, handle_passport_photo_warning_p1),
