@@ -86,3 +86,9 @@ async def get_contracts(offset: int = 0, limit: int = 10) -> tuple[list[Contract
         )
         contracts = list(result.scalars().all())
         return contracts, total or 0
+
+
+async def get_contract_by_id(contract_id: int) -> Contract | None:
+    """Return a single contract by id, or None."""
+    async with _AsyncSession() as session:
+        return await session.get(Contract, contract_id)
