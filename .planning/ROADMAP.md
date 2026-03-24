@@ -108,7 +108,11 @@ Plans:
   2. A Claude Vision API failure surfaces as a user-readable message ("Не удалось распознать паспорт, попробуйте снова") without a stack trace
   3. A LibreOffice conversion failure surfaces as a user-readable message and does not leave orphan temp files
   4. The bot continues operating normally after a handled error (no crash, no stuck state)
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Wire database.init() into main.py + extend handle_confirm: generate_contract + save_contract + send_document
+- [ ] 06-02-PLAN.md — Error boundaries (OCR, PDF, DB) in conversation.py + tests/test_integration.py
 
 ## Progress
 
@@ -122,4 +126,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Document Generation | 1/2 | In Progress|  |
 | 4. OCR Service | 2/2 | Complete   | 2026-03-24 |
 | 5. FSM Dialog Layer | 2/2 | Complete   | 2026-03-24 |
-| 6. Integration and Error Handling | 0/? | Not started | - |
+| 6. Integration and Error Handling | 0/2 | Not started | - |
