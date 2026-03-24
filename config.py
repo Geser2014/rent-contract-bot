@@ -33,10 +33,8 @@ def validate() -> None:
         errors.append("TELEGRAM_BOT_TOKEN is not set")
     if not ANTHROPIC_KEY:
         errors.append("ANTHROPIC_API_KEY is not set")
-    if not (TEMPLATES_DIR / "Подольская 39").is_dir():
-        errors.append(f"Missing directory: {TEMPLATES_DIR / 'Подольская 39'}")
-    if not (TEMPLATES_DIR / "Подольская 38").is_dir():
-        errors.append(f"Missing directory: {TEMPLATES_DIR / 'Подольская 38'}")
+    if not TEMPLATES_DIR.is_dir():
+        errors.append(f"Missing directory: {TEMPLATES_DIR}")
     if errors:
         print("ERROR: Configuration problems:\n  " + "\n  ".join(errors), file=sys.stderr)
         sys.exit(1)

@@ -70,16 +70,17 @@ logger = logging.getLogger(__name__)
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Send group selection keyboard and enter GROUP state."""
+    from document_service import APARTMENTS_DATA
     context.user_data.clear()
-    keyboard = [
-        [
-            InlineKeyboardButton("Подольская 39", callback_data="Подольская 39"),
-            InlineKeyboardButton("Подольская 38", callback_data="Подольская 38"),
-        ]
+    groups = [g for g in APARTMENTS_DATA.keys()]
+    # 2 buttons per row
+    rows = [
+        [InlineKeyboardButton(g, callback_data=g) for g in groups[i:i+2]]
+        for i in range(0, len(groups), 2)
     ]
     await update.message.reply_text(
         "Создание договора аренды.\nВыберите группу объектов:",
-        reply_markup=InlineKeyboardMarkup(keyboard),
+        reply_markup=InlineKeyboardMarkup(rows),
     )
     return GROUP
 
