@@ -35,8 +35,8 @@ APARTMENTS_DATA = load_apartments()
 
 
 def get_apartment_names(group: str) -> list[str]:
-    """Return list of apartment names for a group."""
-    return list(APARTMENTS_DATA.get(group, {}).keys())
+    """Return list of apartment names for a group (excludes _short metadata)."""
+    return [k for k in APARTMENTS_DATA.get(group, {}).keys() if not k.startswith("_")]
 
 
 def get_apartment_fixed_data(group: str, apartment: str) -> dict:
@@ -49,8 +49,17 @@ def get_apartment_fixed_data(group: str, apartment: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def generate_contract_number(group: str, apartment: str, contract_date) -> str:
-    """Generate contract number: group/apartment/DD.MM.YYYY."""
-    return f"{group}/{apartment}/{contract_date.strftime('%d.%m.%Y')}"
+    """Generate contract number: П38/4/220209.
+
+    Uses short group code (_short from apartments.json) and apartment
+    contract_num for compact numbering. Date format: DDMMYY.
+    """
+    group_data = APARTMENTS_DATA.get(group, {})
+    short_group = group_data.get("_short", group)
+    apt_data = group_data.get(apartment, {})
+    apt_num = apt_data.get("contract_num", apartment)
+    date_str = contract_date.strftime("%d%m%y")
+    return f"{short_group}/{apt_num}/{date_str}"
 
 
 # ---------------------------------------------------------------------------
