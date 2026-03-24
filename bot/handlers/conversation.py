@@ -4,6 +4,7 @@ Public API:
     build_conversation_handler() -> ConversationHandler
 """
 import logging
+import re
 from decimal import Decimal
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -173,7 +174,9 @@ async def handle_deposit_method(update: Update, context: ContextTypes.DEFAULT_TY
 async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Validate and store tenant phone number."""
     result = validate_phone(update.message.text)
-    if isinstance(result, str):
+    # validate_phone returns str on both success (+7XXXXXXXXXX) and error.
+    # Detect success by matching the normalized E.164 format exactly.
+    if not re.fullmatch(r'\+7\d{10}', result):
         await update.message.reply_text(result)
         return PHONE
     context.user_data["tenant_phone"] = result
@@ -184,7 +187,9 @@ async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 async def handle_email(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Validate and store tenant email — ask for passport page 1."""
     result = validate_email(update.message.text)
-    if isinstance(result, str):
+    # validate_email returns str on both success (lowercased email) and error.
+    # Detect success by matching a basic email pattern.
+    if not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', result):
         await update.message.reply_text(result)
         return EMAIL
     context.user_data["tenant_email"] = result
