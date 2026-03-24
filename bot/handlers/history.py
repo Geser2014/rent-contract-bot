@@ -22,49 +22,23 @@ def _short_name(full_name: str) -> str:
     return full_name
 
 
-def _build_history_keyboard(contracts, offset: int, total: int) -> InlineKeyboardMarkup:
-    """Build keyboard: each contract is a button + pagination row."""
+async def cmd_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /history — show last 10 contracts."""
+    contracts, total = await database.get_contracts(offset=0, limit=PAGE_SIZE)
+    if not contracts:
+        await update.message.reply_text("📋 Договоров пока нет.")
+        return
+
     rows = []
     for c in contracts:
         date_str = c.contract_date.strftime("%d.%m.%Y")
         label = f"{c.contract_number} — {_short_name(c.tenant_full_name)} — {date_str}"
         rows.append([InlineKeyboardButton(label, callback_data=f"hopen:{c.id}")])
 
-    # Pagination row
-    nav = []
-    if offset > 0:
-        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"hist:{offset - PAGE_SIZE}"))
-    if offset + PAGE_SIZE < total:
-        nav.append(InlineKeyboardButton("Вперёд ➡️", callback_data=f"hist:{offset + PAGE_SIZE}"))
-    if nav:
-        rows.append(nav)
-
-    return InlineKeyboardMarkup(rows)
-
-
-async def cmd_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle /history — show first page."""
-    contracts, total = await database.get_contracts(offset=0, limit=PAGE_SIZE)
-    if not contracts:
-        await update.message.reply_text("📋 Договоров пока нет.")
-        return
-
-    text = f"📋 *Договоры* (1–{len(contracts)} из {total}):\nНажмите на договор чтобы открыть PDF:"
-    kb = _build_history_keyboard(contracts, 0, total)
-    await update.message.reply_text(text, parse_mode="Markdown", reply_markup=kb)
-
-
-async def history_page(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle pagination."""
-    query = update.callback_query
-    await query.answer()
-    offset = max(0, int(query.data.split(":")[1]))
-
-    contracts, total = await database.get_contracts(offset=offset, limit=PAGE_SIZE)
-    end = offset + len(contracts)
-    text = f"📋 *Договоры* ({offset + 1}–{end} из {total}):\nНажмите на договор чтобы открыть PDF:"
-    kb = _build_history_keyboard(contracts, offset, total)
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=kb)
+    text = f"📋 *Последние договоры* ({len(contracts)} из {total}):"
+    await update.message.reply_text(
+        text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(rows),
+    )
 
 
 async def history_open(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -97,6 +71,5 @@ def get_history_handlers() -> list:
     """Return handlers to register in the application."""
     return [
         CommandHandler("history", cmd_history),
-        CallbackQueryHandler(history_page, pattern=r"^hist:\d+$"),
         CallbackQueryHandler(history_open, pattern=r"^hopen:\d+$"),
     ]
