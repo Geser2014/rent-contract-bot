@@ -49,7 +49,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Validators (date, phone, email, amount, age) with TDD test suite
+- [x] 02-01-PLAN.md — Validators (date, phone, email, amount, age) with TDD test suite
 - [ ] 02-02-PLAN.md — ContractData dataclass, Contract ORM model, database init and save
 
 ### Phase 3: Document Generation
