@@ -88,6 +88,45 @@ async def get_contracts(offset: int = 0, limit: int = 10) -> tuple[list[Contract
         return contracts, total or 0
 
 
+async def get_contracts_by_month(year: int, month: int) -> list[Contract]:
+    """Return contracts for a specific year+month, ordered by date desc."""
+    import calendar
+    first_day = datetime.date(year, month, 1)
+    last_day = datetime.date(year, month, calendar.monthrange(year, month)[1])
+    async with _AsyncSession() as session:
+        result = await session.execute(
+            select(Contract)
+            .where(Contract.contract_date >= first_day)
+            .where(Contract.contract_date <= last_day)
+            .order_by(Contract.contract_date.desc())
+        )
+        return list(result.scalars().all())
+
+
+async def get_available_years() -> list[int]:
+    """Return distinct years that have contracts, descending."""
+    async with _AsyncSession() as session:
+        result = await session.execute(
+            select(func.distinct(func.strftime("%Y", Contract.contract_date)))
+            .order_by(func.strftime("%Y", Contract.contract_date).desc())
+        )
+        return [int(r[0]) for r in result.all() if r[0]]
+
+
+async def get_available_months(year: int) -> list[int]:
+    """Return distinct months for a given year that have contracts."""
+    first_day = datetime.date(year, 1, 1)
+    last_day = datetime.date(year, 12, 31)
+    async with _AsyncSession() as session:
+        result = await session.execute(
+            select(func.distinct(func.strftime("%m", Contract.contract_date)))
+            .where(Contract.contract_date >= first_day)
+            .where(Contract.contract_date <= last_day)
+            .order_by(func.strftime("%m", Contract.contract_date))
+        )
+        return [int(r[0]) for r in result.all() if r[0]]
+
+
 async def get_contract_by_id(contract_id: int) -> Contract | None:
     """Return a single contract by id, or None."""
     async with _AsyncSession() as session:
