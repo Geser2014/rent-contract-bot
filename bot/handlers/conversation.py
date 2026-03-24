@@ -482,7 +482,7 @@ async def _save_roommate_and_ask_more(query, context: ContextTypes.DEFAULT_TYPE)
 
     count = len(context.user_data["roommates"])
 
-    if count >= 2:
+    if count >= 5:
         # Max reached
         context.user_data["residents"] = "; ".join(context.user_data["roommates"])
         await query.edit_message_text(
