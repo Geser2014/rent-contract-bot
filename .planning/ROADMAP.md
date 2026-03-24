@@ -46,7 +46,11 @@ Plans:
   2. Each validator accepts valid input and returns a normalized value
   3. The `Contract` SQLAlchemy model creates the SQLite table on `db.init()` with all required fields
   4. A `ContractData` dataclass instance can be constructed from fixture data and saved to the database without errors
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Validators (date, phone, email, amount, age) with TDD test suite
+- [ ] 02-02-PLAN.md — ContractData dataclass, Contract ORM model, database init and save
 
 ### Phase 3: Document Generation
 **Goal**: Given a populated `ContractData` object, the system produces a correctly formatted PDF contract file without any Telegram interaction
@@ -104,7 +108,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Infrastructure | 2/2 | Complete   | 2026-03-24 |
-| 2. Validation and Data Layer | 0/? | Not started | - |
+| 2. Validation and Data Layer | 0/2 | Not started | - |
 | 3. Document Generation | 0/? | Not started | - |
 | 4. OCR Service | 0/? | Not started | - |
 | 5. FSM Dialog Layer | 0/? | Not started | - |
