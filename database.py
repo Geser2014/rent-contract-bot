@@ -127,6 +127,44 @@ async def get_available_months(year: int) -> list[int]:
         return [int(r[0]) for r in result.all() if r[0]]
 
 
+async def get_stats() -> dict:
+    """Return contract statistics: total, by group, by month for current year."""
+    import calendar as cal
+    now = datetime.datetime.now(datetime.UTC)
+    year = now.year
+
+    async with _AsyncSession() as session:
+        total = await session.scalar(select(func.count(Contract.id))) or 0
+
+        # By group
+        group_rows = (await session.execute(
+            select(Contract.group, func.count(Contract.id))
+            .group_by(Contract.group)
+            .order_by(func.count(Contract.id).desc())
+        )).all()
+
+        # By month for current year
+        first_day = datetime.date(year, 1, 1)
+        last_day = datetime.date(year, 12, 31)
+        month_rows = (await session.execute(
+            select(
+                func.strftime("%m", Contract.contract_date),
+                func.count(Contract.id),
+            )
+            .where(Contract.contract_date >= first_day)
+            .where(Contract.contract_date <= last_day)
+            .group_by(func.strftime("%m", Contract.contract_date))
+            .order_by(func.strftime("%m", Contract.contract_date))
+        )).all()
+
+    return {
+        "total": total,
+        "year": year,
+        "by_group": [(g, c) for g, c in group_rows],
+        "by_month": [(int(m), c) for m, c in month_rows if m],
+    }
+
+
 async def get_contract_by_id(contract_id: int) -> Contract | None:
     """Return a single contract by id, or None."""
     async with _AsyncSession() as session:

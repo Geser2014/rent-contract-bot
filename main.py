@@ -10,6 +10,7 @@ from logger import configure_logging, get_logger  # noqa: E402
 from telegram.ext import Application, PicklePersistence  # noqa: E402
 from bot.handlers.conversation import build_conversation_handler  # noqa: E402
 from bot.handlers.history import get_history_handlers  # noqa: E402
+from bot.handlers.stats import get_stats_handlers  # noqa: E402
 
 configure_logging(log_level=config.LOG_LEVEL, log_dir=config.LOGS_DIR)
 _log = get_logger(__name__)
@@ -22,6 +23,7 @@ async def _post_init(application: Application) -> None:
     await application.bot.set_my_commands([
         BotCommand("start", "Создать договор аренды"),
         BotCommand("history", "История договоров"),
+        BotCommand("stats", "Статистика"),
         BotCommand("cancel", "Отменить создание договора"),
     ])
 
@@ -41,6 +43,8 @@ def main() -> None:
     )
     app.add_handler(build_conversation_handler())
     for h in get_history_handlers():
+        app.add_handler(h)
+    for h in get_stats_handlers():
         app.add_handler(h)
     _log.info("Bot ready. Starting polling...")
     app.run_polling(drop_pending_updates=True)
