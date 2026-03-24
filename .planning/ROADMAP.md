@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Project scaffold: pinned dependencies, .env.example, storage directory tree, main.py skeleton
+- [x] 01-01-PLAN.md — Project scaffold: pinned dependencies, .env.example, storage directory tree, main.py skeleton
 - [ ] 01-02-PLAN.md — Config module, structured logging, LibreOffice verification script
 
 ### Phase 2: Validation and Data Layer
@@ -103,7 +103,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Infrastructure | 0/2 | Not started | - |
+| 1. Infrastructure | 1/2 | In Progress|  |
 | 2. Validation and Data Layer | 0/? | Not started | - |
 | 3. Document Generation | 0/? | Not started | - |
 | 4. OCR Service | 0/? | Not started | - |

@@ -48,7 +48,7 @@
 
 ### Infrastructure
 
-- [ ] **INFR-01**: Бот запускается командой `python main.py` без ошибок
+- [x] **INFR-01**: Бот запускается командой `python main.py` без ошибок
 - [ ] **INFR-02**: Команда /start начинает диалог создания договора
 - [ ] **INFR-03**: Команда /cancel отменяет создание на любом этапе
 - [ ] **INFR-04**: Критические операции (OCR, PDF, DB) логируются
@@ -109,7 +109,7 @@
 | DOC-04 | Phase 6 | Pending |
 | DB-01 | Phase 2 | Pending |
 | DB-02 | Phase 2 | Pending |
-| INFR-01 | Phase 1 | Pending |
+| INFR-01 | Phase 1 | Complete |
 | INFR-02 | Phase 5 | Pending |
 | INFR-03 | Phase 5 | Pending |
 | INFR-04 | Phase 1 | Pending |
