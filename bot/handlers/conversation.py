@@ -3,6 +3,7 @@
 Public API:
     build_conversation_handler() -> ConversationHandler
 """
+import datetime
 import logging
 import re
 import subprocess
@@ -10,6 +11,7 @@ from decimal import Decimal
 
 import anthropic
 from sqlalchemy.exc import IntegrityError
+from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
@@ -101,11 +103,15 @@ async def handle_group(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
 
 async def handle_apartment(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle apartment selection — ask for contract date."""
+    """Handle apartment selection — show calendar for contract date."""
     query = update.callback_query
     await query.answer()
     context.user_data["apartment"] = query.data
-    await query.edit_message_text("Введите дату договора (ДД.ММ.ГГГГ):")
+    calendar, step = DetailedTelegramCalendar(locale="ru", min_date=datetime.date(2020, 1, 1)).build()
+    await query.edit_message_text(
+        f"Выберите дату договора ({LSTEP.get(step, step)}):",
+        reply_markup=calendar,
+    )
     return CONTRACT_DATE
 
 
@@ -113,26 +119,61 @@ async def handle_apartment(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 # Text-input states
 # ---------------------------------------------------------------------------
 
-async def handle_contract_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Validate and store contract date."""
-    result = validate_date(update.message.text)
-    if isinstance(result, str):
-        await update.message.reply_text(result)
+async def handle_contract_date_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Show calendar for contract date selection."""
+    query = update.callback_query
+    await query.answer()
+    calendar, step = DetailedTelegramCalendar(locale="ru", min_date=datetime.date(2020, 1, 1)).build()
+    await query.edit_message_text(
+        f"Выберите дату договора ({LSTEP.get(step, step)}):",
+        reply_markup=calendar,
+    )
+    return CONTRACT_DATE
+
+
+async def handle_contract_date_cal(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle calendar callback for contract date."""
+    query = update.callback_query
+    await query.answer()
+    result, key, step = DetailedTelegramCalendar(locale="ru", min_date=datetime.date(2020, 1, 1)).process(query.data)
+    if not result and key:
+        await query.edit_message_text(
+            f"Выберите дату договора ({LSTEP.get(step, step)}):",
+            reply_markup=key,
+        )
         return CONTRACT_DATE
-    context.user_data["contract_date"] = result
-    await update.message.reply_text("Введите дату Акта приёма-передачи (ДД.ММ.ГГГГ):")
-    return ACT_DATE
-
-
-async def handle_act_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Validate and store act date."""
-    result = validate_date(update.message.text)
-    if isinstance(result, str):
-        await update.message.reply_text(result)
+    if result:
+        context.user_data["contract_date"] = result
+        # Show calendar for act date
+        calendar, step = DetailedTelegramCalendar(locale="ru", min_date=datetime.date(2020, 1, 1)).build()
+        await query.edit_message_text(
+            f"✅ Дата договора: {result.strftime('%d.%m.%Y')}\n\n"
+            f"Выберите дату Акта приёма-передачи ({LSTEP.get(step, step)}):",
+            reply_markup=calendar,
+        )
         return ACT_DATE
-    context.user_data["act_date"] = result
-    await update.message.reply_text("Введите срок договора в днях (например, 365):")
-    return CONTRACT_DURATION
+    return CONTRACT_DATE
+
+
+async def handle_act_date_cal(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle calendar callback for act date."""
+    query = update.callback_query
+    await query.answer()
+    result, key, step = DetailedTelegramCalendar(locale="ru", min_date=datetime.date(2020, 1, 1)).process(query.data)
+    if not result and key:
+        await query.edit_message_text(
+            f"Выберите дату Акта приёма-передачи ({LSTEP.get(step, step)}):",
+            reply_markup=key,
+        )
+        return ACT_DATE
+    if result:
+        context.user_data["act_date"] = result
+        await query.edit_message_text(
+            f"✅ Дата Акта: {result.strftime('%d.%m.%Y')}\n\n"
+            "Введите срок договора в днях (например, 365):"
+        )
+        return CONTRACT_DURATION
+    return ACT_DATE
 
 
 async def handle_contract_duration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -501,8 +542,8 @@ def build_conversation_handler() -> ConversationHandler:
         states={
             GROUP:            [CallbackQueryHandler(handle_group)],
             APARTMENT:        [CallbackQueryHandler(handle_apartment)],
-            CONTRACT_DATE:    [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_contract_date)],
-            ACT_DATE:         [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_act_date)],
+            CONTRACT_DATE:    [CallbackQueryHandler(handle_contract_date_cal)],
+            ACT_DATE:         [CallbackQueryHandler(handle_act_date_cal)],
             CONTRACT_DURATION:[MessageHandler(filters.TEXT & ~filters.COMMAND, handle_contract_duration)],
             MONTHLY_AMOUNT:   [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_monthly_amount)],
             DEPOSIT_AMOUNT:   [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_deposit_amount)],
