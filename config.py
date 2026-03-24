@@ -5,7 +5,10 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+env_path = Path(__file__).parent / ".env"
+load_dotenv(dotenv_path=env_path)
+
+
 
 # --- Required ---
 BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -30,10 +33,10 @@ def validate() -> None:
         errors.append("TELEGRAM_BOT_TOKEN is not set")
     if not ANTHROPIC_KEY:
         errors.append("ANTHROPIC_API_KEY is not set")
-    if not (TEMPLATES_DIR / "Г39").is_dir():
-        errors.append(f"Missing directory: {TEMPLATES_DIR / 'Г39'}")
-    if not (TEMPLATES_DIR / "Г38").is_dir():
-        errors.append(f"Missing directory: {TEMPLATES_DIR / 'Г38'}")
+    if not (TEMPLATES_DIR / "Подольская 39").is_dir():
+        errors.append(f"Missing directory: {TEMPLATES_DIR / 'Подольская 39'}")
+    if not (TEMPLATES_DIR / "Подольская 38").is_dir():
+        errors.append(f"Missing directory: {TEMPLATES_DIR / 'Подольская 38'}")
     if errors:
         print("ERROR: Configuration problems:\n  " + "\n  ".join(errors), file=sys.stderr)
         sys.exit(1)

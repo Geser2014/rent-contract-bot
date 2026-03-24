@@ -61,8 +61,8 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
     keyboard = [
         [
-            InlineKeyboardButton("Г39", callback_data="Г39"),
-            InlineKeyboardButton("Г38", callback_data="Г38"),
+            InlineKeyboardButton("Подольская 39", callback_data="Подольская 39"),
+            InlineKeyboardButton("Подольская 38", callback_data="Подольская 38"),
         ]
     ]
     await update.message.reply_text(
