@@ -51,7 +51,7 @@
 - [x] **INFR-01**: Бот запускается командой `python main.py` без ошибок
 - [ ] **INFR-02**: Команда /start начинает диалог создания договора
 - [ ] **INFR-03**: Команда /cancel отменяет создание на любом этапе
-- [ ] **INFR-04**: Критические операции (OCR, PDF, DB) логируются
+- [x] **INFR-04**: Критические операции (OCR, PDF, DB) логируются
 - [ ] **INFR-05**: Ошибки в критических операциях перехватываются и пользователь получает понятное сообщение
 
 ## v2 Requirements
@@ -112,7 +112,7 @@
 | INFR-01 | Phase 1 | Complete |
 | INFR-02 | Phase 5 | Pending |
 | INFR-03 | Phase 5 | Pending |
-| INFR-04 | Phase 1 | Pending |
+| INFR-04 | Phase 1 | Complete |
 | INFR-05 | Phase 6 | Pending |
 
 **Coverage:**

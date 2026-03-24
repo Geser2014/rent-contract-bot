@@ -12,7 +12,7 @@ Six phases that build in strict dependency order: scaffold and config first, the
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Infrastructure** - Project scaffold, dependencies, environment config, LibreOffice verified
+- [x] **Phase 1: Infrastructure** - Project scaffold, dependencies, environment config, LibreOffice verified (completed 2026-03-24)
 - [ ] **Phase 2: Validation and Data Layer** - Pydantic validators, SQLAlchemy models, ContractData dataclass
 - [ ] **Phase 3: Document Generation** - DOCX template fill, LibreOffice PDF conversion, file management
 - [ ] **Phase 4: OCR Service** - Claude Vision passport extraction, UNCLEAR handling, field validation
@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01-PLAN.md — Project scaffold: pinned dependencies, .env.example, storage directory tree, main.py skeleton
-- [ ] 01-02-PLAN.md — Config module, structured logging, LibreOffice verification script
+- [x] 01-02-PLAN.md — Config module, structured logging, LibreOffice verification script
 
 ### Phase 2: Validation and Data Layer
 **Goal**: All data shapes and validation rules are codified in pure Python before any external service is called, giving every downstream layer a stable contract to program against
@@ -103,7 +103,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Infrastructure | 1/2 | In Progress|  |
+| 1. Infrastructure | 2/2 | Complete   | 2026-03-24 |
 | 2. Validation and Data Layer | 0/? | Not started | - |
 | 3. Document Generation | 0/? | Not started | - |
 | 4. OCR Service | 0/? | Not started | - |
