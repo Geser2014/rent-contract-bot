@@ -96,7 +96,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — bot/handlers/conversation.py: all 12 FSM state handlers, APARTMENTS dict, build_conversation_handler()
+- [x] 05-01-PLAN.md — bot/handlers/conversation.py: all 12 FSM state handlers, APARTMENTS dict, build_conversation_handler()
 - [ ] 05-02-PLAN.md — main.py ApplicationBuilder + PicklePersistence wiring, tests/test_conversation.py unit tests
 
 ### Phase 6: Integration and Error Handling

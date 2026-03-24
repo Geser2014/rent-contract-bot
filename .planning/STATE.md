@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-stopped_at: Completed 04-ocr-service-04-02-PLAN.md
-last_updated: "2026-03-24T08:08:16.305Z"
+status: Ready to execute
+stopped_at: Completed 05-fsm-dialog-layer-05-01-PLAN.md
+last_updated: "2026-03-24T08:28:47.514Z"
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 10
+  completed_plans: 9
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Полный цикл создания договора аренды за 2-3 минуты вместо 25-40 минут ручной работы
-**Current focus:** Phase 04 — ocr-service
+**Current focus:** Phase 05 — fsm-dialog-layer
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
+Phase: 05 (fsm-dialog-layer) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Plan: Not started
 | Phase 03-document-generation P02 | 8 | 1 tasks | 2 files |
 | Phase 04-ocr-service P01 | 2 | 1 tasks | 1 files |
 | Phase 04-ocr-service P02 | 5 | 1 tasks | 1 files |
+| Phase 05-fsm-dialog-layer P01 | 2 | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,8 @@ Recent decisions affecting current work:
 - [Phase 04-ocr-service]: Module-level AsyncAnthropic singleton in ocr_service.py — not per-call — avoids unnecessary object creation
 - [Phase 04-ocr-service]: tool_use with forced tool_choice used for Claude OCR — not prompt-only JSON — for deterministic structured passport output
 - [Phase 04-ocr-service]: asyncio_mode=auto already configured in pyproject.toml — no @pytest.mark.asyncio decorators needed in test_ocr_service.py
+- [Phase 05-fsm-dialog-layer]: build_conversation_handler() factory pattern keeps ConversationHandler construction testable and separate from handler logic
+- [Phase 05-fsm-dialog-layer]: handle_unexpected returns None (not END) to stay in current state; passport bytes popped after OCR to prevent PicklePersistence bloat
 
 ### Pending Todos
 
@@ -93,6 +96,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T08:04:50.870Z
-Stopped at: Completed 04-ocr-service-04-02-PLAN.md
+Last session: 2026-03-24T08:28:47.511Z
+Stopped at: Completed 05-fsm-dialog-layer-05-01-PLAN.md
 Resume file: None
