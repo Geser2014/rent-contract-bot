@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 05-fsm-dialog-layer-05-01-PLAN.md
-last_updated: "2026-03-24T08:28:47.514Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 05-fsm-dialog-layer-05-02-PLAN.md
+last_updated: "2026-03-24T08:33:44.999Z"
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -55,6 +55,7 @@ Plan: 2 of 2
 | Phase 04-ocr-service P01 | 2 | 1 tasks | 1 files |
 | Phase 04-ocr-service P02 | 5 | 1 tasks | 1 files |
 | Phase 05-fsm-dialog-layer P01 | 2 | 1 tasks | 3 files |
+| Phase 05-fsm-dialog-layer P02 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,8 @@ Recent decisions affecting current work:
 - [Phase 04-ocr-service]: asyncio_mode=auto already configured in pyproject.toml — no @pytest.mark.asyncio decorators needed in test_ocr_service.py
 - [Phase 05-fsm-dialog-layer]: build_conversation_handler() factory pattern keeps ConversationHandler construction testable and separate from handler logic
 - [Phase 05-fsm-dialog-layer]: handle_unexpected returns None (not END) to stay in current state; passport bytes popped after OCR to prevent PicklePersistence bloat
+- [Phase 05-fsm-dialog-layer]: re.fullmatch used in handle_phone/handle_email instead of isinstance(str) since validate_phone/validate_email return str for both valid output and error
+- [Phase 05-fsm-dialog-layer]: concurrent_updates=False required for ConversationHandler; PicklePersistence initialized from config.PERSISTENCE_PATH for FSM state persistence across restarts
 
 ### Pending Todos
 
@@ -96,6 +99,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T08:28:47.511Z
-Stopped at: Completed 05-fsm-dialog-layer-05-01-PLAN.md
+Last session: 2026-03-24T08:33:44.996Z
+Stopped at: Completed 05-fsm-dialog-layer-05-02-PLAN.md
 Resume file: None
