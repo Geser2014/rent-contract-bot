@@ -373,21 +373,20 @@ async def _show_ocr_confirm(message_or_query, context: ContextTypes.DEFAULT_TYPE
 
 
 # ---------------------------------------------------------------------------
-# OCR confirmation + field-by-field editing
+# OCR confirmation + field editing by selection
 # ---------------------------------------------------------------------------
 
-# Ordered list of editable fields with Russian labels
 _EDITABLE_FIELDS = [
     ("tenant_full_name",       "ФИО"),
     ("tenant_dob",             "Дата рождения"),
     ("tenant_birthplace",      "Место рождения"),
     ("tenant_gender",          "Пол"),
-    ("passport_series",        "Серия паспорта"),
-    ("passport_number",        "Номер паспорта"),
+    ("passport_series",        "Серия"),
+    ("passport_number",        "Номер"),
     ("passport_issued_date",   "Дата выдачи"),
     ("passport_issued_by",     "Кем выдан"),
-    ("passport_division_code", "Код подразделения"),
-    ("tenant_address",         "Адрес регистрации"),
+    ("passport_division_code", "Код подр."),
+    ("tenant_address",         "Адрес рег."),
 ]
 
 
@@ -405,115 +404,79 @@ async def handle_confirm_ocr(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return PASSPORT_PAGE1
 
     if query.data == "ocr_ok":
-        # OCR confirmed — proceed to final contract confirm
         return await _show_final_confirm(query, context)
 
     if query.data == "ocr_edit":
-        # Start editing fields one by one
-        context.user_data["_edit_index"] = 0
-        return await _ask_edit_field(query, context)
+        return await _show_field_picker(query, context)
+
+    # Handle field selection: "edit_field:tenant_full_name"
+    if query.data.startswith("edit_field:"):
+        field_key = query.data.split(":", 1)[1]
+        context.user_data["_editing_field"] = field_key
+        label = dict(_EDITABLE_FIELDS).get(field_key, field_key)
+        current = context.user_data["passport_fields"].get(field_key, "—")
+        await query.edit_message_text(
+            f"✏️ *{label}*\n\nТекущее значение: `{current}`\n\nВведите новое значение:",
+            parse_mode="Markdown",
+        )
+        return EDIT_FIELD
 
     return CONFIRM_OCR
 
 
-async def _ask_edit_field(query, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Show current field value and ask to edit or keep."""
-    idx = context.user_data.get("_edit_index", 0)
+async def _show_field_picker(query, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Show buttons for each field — tap to edit that field."""
     fields = context.user_data["passport_fields"]
 
-    if idx >= len(_EDITABLE_FIELDS):
-        # All fields reviewed — show summary again
-        context.user_data.pop("_edit_index", None)
-        return await _show_ocr_confirm_from_query(query, context)
+    rows = []
+    for field_key, label in _EDITABLE_FIELDS:
+        value = fields.get(field_key, "—")
+        # Truncate long values for button text
+        short_val = value[:25] + "…" if len(value) > 25 else value
+        rows.append([InlineKeyboardButton(
+            f"{label}: {short_val}",
+            callback_data=f"edit_field:{field_key}",
+        )])
 
-    field_key, field_label = _EDITABLE_FIELDS[idx]
-    current_value = fields.get(field_key, "—")
+    rows.append([
+        InlineKeyboardButton("✅ Готово", callback_data="ocr_ok"),
+        InlineKeyboardButton("🔄 Переснять", callback_data="ocr_retry"),
+    ])
 
-    keyboard = [[InlineKeyboardButton("Оставить ➡️", callback_data="edit_keep")]]
     await query.edit_message_text(
-        f"*{field_label}:* `{current_value}`\n\n"
-        "Отправьте новое значение или нажмите «Оставить»:",
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-    )
-    return EDIT_FIELD
-
-
-async def _show_ocr_confirm_from_query(query, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Re-show OCR confirm after editing (from callback query context)."""
-    fields = context.user_data["passport_fields"]
-    summary = ocr_service.format_ocr_summary(fields)
-
-    keyboard = [
-        [
-            InlineKeyboardButton("Да ✅", callback_data="ocr_ok"),
-            InlineKeyboardButton("Нет, исправить ✏️", callback_data="ocr_edit"),
-        ],
-        [InlineKeyboardButton("Переснять паспорт 🔄", callback_data="ocr_retry")],
-    ]
-    await query.edit_message_text(
-        f"📋 *Обновлённые данные:*\n\n{summary}\n\nВсё верно?",
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(keyboard),
+        "Нажмите на поле, которое нужно исправить:",
+        reply_markup=InlineKeyboardMarkup(rows),
     )
     return CONFIRM_OCR
 
 
 async def handle_edit_field_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """User sent new value for current field."""
-    idx = context.user_data.get("_edit_index", 0)
-    if idx < len(_EDITABLE_FIELDS):
-        field_key, field_label = _EDITABLE_FIELDS[idx]
+    """User sent new value for selected field — show field picker again."""
+    field_key = context.user_data.pop("_editing_field", None)
+    if field_key:
         context.user_data["passport_fields"][field_key] = update.message.text.strip()
+        label = dict(_EDITABLE_FIELDS).get(field_key, field_key)
+        await update.message.reply_text(f"✅ {label} обновлено.")
 
-    # Move to next field
-    context.user_data["_edit_index"] = idx + 1
-    return await _ask_edit_field_from_message(update, context)
-
-
-async def handle_edit_field_keep(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """User pressed 'Keep' — skip to next field."""
-    query = update.callback_query
-    await query.answer()
-    idx = context.user_data.get("_edit_index", 0)
-    context.user_data["_edit_index"] = idx + 1
-    return await _ask_edit_field(query, context)
-
-
-async def _ask_edit_field_from_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Show next edit field prompt (from text message context)."""
-    idx = context.user_data.get("_edit_index", 0)
+    # Show field picker again
     fields = context.user_data["passport_fields"]
-
-    if idx >= len(_EDITABLE_FIELDS):
-        # All fields reviewed — show updated summary
-        context.user_data.pop("_edit_index", None)
-        summary = ocr_service.format_ocr_summary(fields)
-        keyboard = [
-            [
-                InlineKeyboardButton("Да ✅", callback_data="ocr_ok"),
-                InlineKeyboardButton("Нет, исправить ✏️", callback_data="ocr_edit"),
-            ],
-            [InlineKeyboardButton("Переснять паспорт 🔄", callback_data="ocr_retry")],
-        ]
-        await update.message.reply_text(
-            f"📋 *Обновлённые данные:*\n\n{summary}\n\nВсё верно?",
-            parse_mode="Markdown",
-            reply_markup=InlineKeyboardMarkup(keyboard),
-        )
-        return CONFIRM_OCR
-
-    field_key, field_label = _EDITABLE_FIELDS[idx]
-    current_value = fields.get(field_key, "—")
-
-    keyboard = [[InlineKeyboardButton("Оставить ➡️", callback_data="edit_keep")]]
+    rows = []
+    for fk, lbl in _EDITABLE_FIELDS:
+        value = fields.get(fk, "—")
+        short_val = value[:25] + "…" if len(value) > 25 else value
+        rows.append([InlineKeyboardButton(
+            f"{lbl}: {short_val}",
+            callback_data=f"edit_field:{fk}",
+        )])
+    rows.append([
+        InlineKeyboardButton("✅ Готово", callback_data="ocr_ok"),
+        InlineKeyboardButton("🔄 Переснять", callback_data="ocr_retry"),
+    ])
     await update.message.reply_text(
-        f"*{field_label}:* `{current_value}`\n\n"
-        "Отправьте новое значение или нажмите «Оставить»:",
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(keyboard),
+        "Нажмите на поле для исправления или «Готово»:",
+        reply_markup=InlineKeyboardMarkup(rows),
     )
-    return EDIT_FIELD
+    return CONFIRM_OCR
 
 
 async def _show_final_confirm(query, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -733,7 +696,6 @@ def build_conversation_handler() -> ConversationHandler:
             ],
             CONFIRM_OCR:      [CallbackQueryHandler(handle_confirm_ocr)],
             EDIT_FIELD: [
-                CallbackQueryHandler(handle_edit_field_keep, pattern="^edit_keep$"),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_edit_field_text),
             ],
             CONFIRM:          [CallbackQueryHandler(handle_confirm)],
