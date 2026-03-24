@@ -18,7 +18,8 @@ from telegram.ext import (
 )
 
 import ocr_service
-from document_service import generate_contract_number
+import database
+from document_service import generate_contract, generate_contract_number
 from models import ContractData
 from validators import validate_age, validate_amount, validate_date, validate_email, validate_phone
 
@@ -356,10 +357,30 @@ async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     logger.info("ContractData assembled: contract_number=%s", contract_number)
 
     await query.edit_message_text(
-        f"✅ Данные подтверждены.\n"
-        f"Номер договора: {contract_number}\n"
-        "Генерация договора будет выполнена в следующем шаге."
+        f"✅ Данные подтверждены. Номер договора: {contract_number}\n"
+        "Генерирую договор... ⏳"
     )
+
+    # Generate PDF
+    pdf_path = await generate_contract(contract_data)
+    contract_data.pdf_path = pdf_path
+    logger.info("PDF generated: %s", pdf_path)
+
+    # Save to database
+    row_id = await database.save_contract(contract_data)
+    logger.info("Contract saved to DB: id=%d contract_number=%s", row_id, contract_number)
+
+    # Send PDF to user
+    chat_id = query.message.chat_id
+    with open(pdf_path, "rb") as pdf_file:
+        await context.bot.send_document(
+            chat_id=chat_id,
+            document=pdf_file,
+            filename=f"Договор_{contract_number.replace('/', '_')}.pdf",
+            caption=f"Договор аренды №{contract_number} готов.",
+        )
+
+    context.user_data.clear()
     return ConversationHandler.END
 
 
