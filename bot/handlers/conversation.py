@@ -188,12 +188,8 @@ async def handle_deposit_method(update: Update, context: ContextTypes.DEFAULT_TY
 
 
 async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Validate and store tenant phone number."""
-    result = validate_phone(update.message.text)
-    if not re.fullmatch(r'\+7\d{10}', result):
-        await update.message.reply_text(result)
-        return PHONE
-    context.user_data["tenant_phone"] = result
+    """Store tenant phone number (any format)."""
+    context.user_data["tenant_phone"] = update.message.text.strip()
     await update.message.reply_text("Введите email арендатора:")
     return EMAIL
 
