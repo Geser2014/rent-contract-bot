@@ -58,8 +58,9 @@ logger = logging.getLogger(__name__)
     PASSPORT_PAGE2,
     CONFIRM_OCR,
     EDIT_FIELD,
+    CHOOSE_FORMAT,
     CONFIRM,
-) = range(24)
+) = range(25)
 
 
 # ---------------------------------------------------------------------------
@@ -762,22 +763,37 @@ async def handle_edit_field_text(update: Update, context: ContextTypes.DEFAULT_T
 
 
 async def _show_final_confirm(query, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Show final confirmation with all data before contract generation."""
-    ud = context.user_data
-    fields = ud["passport_fields"]
-
+    """Ask for output format before generating contract."""
     keyboard = [
         [
-            InlineKeyboardButton("Подтвердить ✅", callback_data="confirm"),
-            InlineKeyboardButton("Отмена ❌", callback_data="cancel_confirm"),
-        ]
+            InlineKeyboardButton("📄 PDF", callback_data="fmt_pdf"),
+            InlineKeyboardButton("📝 DOCX", callback_data="fmt_docx"),
+            InlineKeyboardButton("📄+📝 Оба", callback_data="fmt_both"),
+        ],
+        [InlineKeyboardButton("Отмена ❌", callback_data="cancel_confirm")],
     ]
     await query.edit_message_text(
         "✅ Паспортные данные подтверждены.\n\n"
-        "Создать договор?",
+        "В каком формате выгрузить договор?",
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
-    return CONFIRM
+    return CHOOSE_FORMAT
+
+
+async def handle_choose_format(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle format selection — store choice and trigger generation."""
+    query = update.callback_query
+    await query.answer()
+
+    if query.data == "cancel_confirm":
+        context.user_data.clear()
+        await query.edit_message_text("Создание договора отменено. Для начала введите /start")
+        return ConversationHandler.END
+
+    # Store format choice and go to generation
+    context.user_data["output_format"] = query.data.replace("fmt_", "")  # "pdf", "docx", "both"
+    # Trigger handle_confirm directly by returning CONFIRM with a synthetic callback
+    return await handle_confirm(update, context)
 
 
 async def handle_passport_photo_warning_p2(
@@ -797,16 +813,8 @@ async def handle_passport_photo_warning_p2(
 # ---------------------------------------------------------------------------
 
 async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle confirm or retry_passport callback at the CONFIRM state."""
+    """Generate contract — called from handle_choose_format."""
     query = update.callback_query
-    await query.answer()
-
-    if query.data == "cancel_confirm":
-        context.user_data.clear()
-        await query.edit_message_text("Создание договора отменено. Для начала введите /start")
-        return ConversationHandler.END
-
-    # query.data == "confirm"
     ud = context.user_data
     fields = ud["passport_fields"]
 
@@ -876,21 +884,27 @@ async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         "Генерирую договор... ⏳"
     )
 
-    # Generate PDF
+    output_format = ud.get("output_format", "pdf")
+    safe_name = contract_number.replace("/", "_")
+    chat_id = query.message.chat_id
+
+    # Generate contract (always produces filled file + PDF)
     try:
         pdf_path = await generate_contract(contract_data, extra)
     except subprocess.TimeoutExpired as exc:
         logger.error("PDF generation timed out: %s", exc)
         context.user_data.clear()
-        await query.edit_message_text(
-            "Генерация договора заняла слишком долго. Попробуйте ещё раз позже."
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="Генерация договора заняла слишком долго. Попробуйте ещё раз позже.",
         )
         return ConversationHandler.END
     except (FileNotFoundError, RuntimeError) as exc:
         logger.error("PDF generation failed: %s", exc)
         context.user_data.clear()
-        await query.edit_message_text(
-            f"Не удалось создать договор: {exc}"
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"Не удалось создать договор: {exc}",
         )
         return ConversationHandler.END
 
@@ -904,21 +918,39 @@ async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         logger.error("DB save failed (duplicate contract number?): %s", exc)
         context.user_data.clear()
         await context.bot.send_message(
-            chat_id=query.message.chat_id,
+            chat_id=chat_id,
             text="Договор с таким номером уже существует. Начните заново: /start",
         )
         return ConversationHandler.END
     logger.info("Contract saved to DB: id=%d contract_number=%s", row_id, contract_number)
 
-    # Send PDF to user
-    chat_id = query.message.chat_id
-    with open(pdf_path, "rb") as pdf_file:
-        await context.bot.send_document(
-            chat_id=chat_id,
-            document=pdf_file,
-            filename=f"Договор_{contract_number.replace('/', '_')}.pdf",
-            caption=f"Договор аренды №{contract_number} готов.",
-        )
+    # Send files based on chosen format
+    if output_format in ("pdf", "both"):
+        with open(pdf_path, "rb") as f:
+            await context.bot.send_document(
+                chat_id=chat_id,
+                document=f,
+                filename=f"Договор_{safe_name}.pdf",
+                caption=f"📄 Договор №{contract_number}",
+            )
+
+    if output_format in ("docx", "both"):
+        # Find the filled DOCX/TXT source file next to the PDF
+        pdf_p = Path(pdf_path)
+        docx_file = pdf_p.with_suffix(".docx")
+        txt_file = pdf_p.with_suffix(".txt")
+        src_file = docx_file if docx_file.exists() else txt_file if txt_file.exists() else None
+        if src_file and src_file.exists():
+            suffix = src_file.suffix.upper().lstrip(".")
+            with open(src_file, "rb") as f:
+                await context.bot.send_document(
+                    chat_id=chat_id,
+                    document=f,
+                    filename=f"Договор_{safe_name}{src_file.suffix}",
+                    caption=f"📝 Договор №{contract_number} ({suffix})",
+                )
+
+    await context.bot.send_message(chat_id=chat_id, text=f"✅ Договор №{contract_number} готов!")
 
     context.user_data.clear()
     return ConversationHandler.END
@@ -994,6 +1026,7 @@ def build_conversation_handler() -> ConversationHandler:
             EDIT_FIELD: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_edit_field_text),
             ],
+            CHOOSE_FORMAT:    [CallbackQueryHandler(handle_choose_format)],
             CONFIRM:          [CallbackQueryHandler(handle_confirm)],
         },
         fallbacks=[
