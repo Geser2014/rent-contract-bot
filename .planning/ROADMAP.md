@@ -80,7 +80,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — ocr_service.py: AsyncAnthropic tool_use call, image resize, UNCLEAR detection, summary formatter
+- [x] 04-01-PLAN.md — ocr_service.py: AsyncAnthropic tool_use call, image resize, UNCLEAR detection, summary formatter
 - [ ] 04-02-PLAN.md — tests/test_ocr_service.py: unit tests for all pure functions and mocked async path
 
 ### Phase 5: FSM Dialog Layer
