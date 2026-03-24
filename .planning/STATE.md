@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-stopped_at: Completed 02-validation-and-data-layer-02-PLAN.md
-last_updated: "2026-03-24T07:11:32.173Z"
+status: Ready to execute
+stopped_at: Completed 03-document-generation-03-01-PLAN.md
+last_updated: "2026-03-24T07:36:32.074Z"
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 6
+  completed_plans: 5
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Полный цикл создания договора аренды за 2-3 минуты вместо 25-40 минут ручной работы
-**Current focus:** Phase 02 — validation-and-data-layer
+**Current focus:** Phase 03 — document-generation
 
 ## Current Position
 
-Phase: 3
-Plan: Not started
+Phase: 03 (document-generation) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -50,6 +50,7 @@ Plan: Not started
 | Phase 01-infrastructure P02 | 2 | 2 tasks | 5 files |
 | Phase 02-validation-and-data-layer P01 | 1 | 2 tasks | 3 files |
 | Phase 02-validation-and-data-layer P02 | 3 | 2 tasks | 5 files |
+| Phase 03-document-generation P01 | 3 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,9 @@ Recent decisions affecting current work:
 - [Phase 02-validation-and-data-layer]: stdlib only for validators (datetime, re, decimal) — no pydantic keeps validation layer dependency-free
 - [Phase 02-validation-and-data-layer]: Used _configure() hook in database.py to enable test isolation with in-memory SQLite
 - [Phase 02-validation-and-data-layer]: Fixed deprecated datetime.utcnow() — using timezone-aware datetime.now(datetime.UTC) for Python 3.12+
+- [Phase 03-document-generation]: docxtpl used for DOCX fill — solves XML run-splitting that defeats raw python-docx
+- [Phase 03-document-generation]: Same-day contract number collision detection deferred to Phase 6 — UNIQUE constraint surfaces duplicates at save time
+- [Phase 03-document-generation]: One DOCX template per group (Г39/Г38), not per apartment — path is TEMPLATES_DIR/group/contract_template.docx
 
 ### Pending Todos
 
@@ -82,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T07:08:30.387Z
-Stopped at: Completed 02-validation-and-data-layer-02-PLAN.md
+Last session: 2026-03-24T07:36:32.071Z
+Stopped at: Completed 03-document-generation-03-01-PLAN.md
 Resume file: None

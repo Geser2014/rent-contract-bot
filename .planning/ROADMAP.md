@@ -64,7 +64,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — DOCX templates (Г39 + Г38 + test fixture) + document_service.py contract number generation and template fill
+- [x] 03-01-PLAN.md — DOCX templates (Г39 + Г38 + test fixture) + document_service.py contract number generation and template fill
 - [ ] 03-02-PLAN.md — LibreOffice PDF conversion, temp file cleanup, full generate_contract() async orchestrator
 
 ### Phase 4: OCR Service
@@ -113,7 +113,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Infrastructure | 2/2 | Complete   | 2026-03-24 |
 | 2. Validation and Data Layer | 0/2 | Not started | - |
-| 3. Document Generation | 0/2 | Not started | - |
+| 3. Document Generation | 1/2 | In Progress|  |
 | 4. OCR Service | 0/? | Not started | - |
 | 5. FSM Dialog Layer | 0/? | Not started | - |
 | 6. Integration and Error Handling | 0/? | Not started | - |
