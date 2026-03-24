@@ -6,6 +6,7 @@ Usage:
 """
 import datetime
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -71,3 +72,17 @@ async def save_contract(data: ContractData) -> int:
         await session.refresh(row)
         _log.info("Contract saved: %s (id=%d)", data.contract_number, row.id)
         return row.id
+
+
+async def get_contracts(offset: int = 0, limit: int = 10) -> tuple[list[Contract], int]:
+    """Return (contracts, total_count) ordered by creation date desc."""
+    async with _AsyncSession() as session:
+        total = await session.scalar(select(func.count(Contract.id)))
+        result = await session.execute(
+            select(Contract)
+            .order_by(Contract.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        contracts = list(result.scalars().all())
+        return contracts, total or 0
