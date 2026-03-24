@@ -31,7 +31,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `storage/templates/` directory structure exists with correct group subdirectories
   4. LibreOffice headless converts a test DOCX to PDF without font substitution warnings
   5. Structured logger is configured and writes to console and log file
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Project scaffold: pinned dependencies, .env.example, storage directory tree, main.py skeleton
+- [ ] 01-02-PLAN.md — Config module, structured logging, LibreOffice verification script
 
 ### Phase 2: Validation and Data Layer
 **Goal**: All data shapes and validation rules are codified in pure Python before any external service is called, giving every downstream layer a stable contract to program against
@@ -99,7 +103,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Infrastructure | 0/? | Not started | - |
+| 1. Infrastructure | 0/2 | Not started | - |
 | 2. Validation and Data Layer | 0/? | Not started | - |
 | 3. Document Generation | 0/? | Not started | - |
 | 4. OCR Service | 0/? | Not started | - |
