@@ -93,8 +93,11 @@ Plans:
   3. The bot walks through all remaining inputs sequentially (dates, amounts, deposit method, phone, email) and validates each before advancing
   4. Sending `/cancel` at any state stops the dialog, clears session data, and sends a confirmation message
   5. Sending an unexpected input type (e.g., a sticker when a date is expected) triggers a helpful re-prompt instead of crashing
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 2 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — bot/handlers/conversation.py: all 12 FSM state handlers, APARTMENTS dict, build_conversation_handler()
+- [ ] 05-02-PLAN.md — main.py ApplicationBuilder + PicklePersistence wiring, tests/test_conversation.py unit tests
 
 ### Phase 6: Integration and Error Handling
 **Goal**: All layers are wired together in `main.py` and the complete contract cycle runs end-to-end: group selection through PDF delivered in Telegram, with all external failures handled gracefully
@@ -118,5 +121,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Validation and Data Layer | 0/2 | Not started | - |
 | 3. Document Generation | 1/2 | In Progress|  |
 | 4. OCR Service | 2/2 | Complete   | 2026-03-24 |
-| 5. FSM Dialog Layer | 0/? | Not started | - |
+| 5. FSM Dialog Layer | 0/2 | Not started | - |
 | 6. Integration and Error Handling | 0/? | Not started | - |
