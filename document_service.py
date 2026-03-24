@@ -254,6 +254,32 @@ def _fill_txt_template(template_path: Path, replacements: dict[str, str]) -> str
     return text
 
 
+def _fill_docx_template(template_path: Path, replacements: dict[str, str], output_path: Path) -> Path:
+    """Fill DOCX template with [PLACEHOLDER] replacement. Returns path to filled DOCX."""
+    from docx import Document
+
+    doc = Document(str(template_path))
+
+    def replace_in_paragraph(paragraph):
+        for key, value in replacements.items():
+            if key in paragraph.text:
+                for run in paragraph.runs:
+                    if key in run.text:
+                        run.text = run.text.replace(key, value)
+
+    for paragraph in doc.paragraphs:
+        replace_in_paragraph(paragraph)
+
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for paragraph in cell.paragraphs:
+                    replace_in_paragraph(paragraph)
+
+    doc.save(str(output_path))
+    return output_path
+
+
 # ---------------------------------------------------------------------------
 # LibreOffice PDF conversion
 # ---------------------------------------------------------------------------
@@ -270,8 +296,8 @@ def _find_libreoffice() -> str:
     return shutil.which("libreoffice") or "libreoffice"
 
 
-def _convert_txt_to_pdf(txt_path: Path, out_dir: Path) -> Path:
-    """Convert TXT to PDF via LibreOffice headless."""
+def _convert_to_pdf(src_path: Path, out_dir: Path) -> Path:
+    """Convert TXT or DOCX to PDF via LibreOffice headless."""
     out_dir.mkdir(parents=True, exist_ok=True)
 
     lo_bin = _find_libreoffice()
@@ -283,13 +309,13 @@ def _convert_txt_to_pdf(txt_path: Path, out_dir: Path) -> Path:
             "--nofirststartwizard",
             "--convert-to", "pdf",
             "--outdir", str(out_dir.resolve()),
-            str(txt_path.resolve()),
+            str(src_path.resolve()),
         ],
         capture_output=True,
         timeout=60,
     )
 
-    expected_pdf = out_dir / (txt_path.stem + ".pdf")
+    expected_pdf = out_dir / (src_path.stem + ".pdf")
     if not expected_pdf.exists():
         raise RuntimeError(
             f"LibreOffice conversion produced no output. "
@@ -304,7 +330,7 @@ def _convert_txt_to_pdf(txt_path: Path, out_dir: Path) -> Path:
 # ---------------------------------------------------------------------------
 
 async def generate_contract(data: ContractData, extra: dict | None = None) -> str:
-    """Fill TXT template and convert to PDF. Returns absolute PDF path.
+    """Fill template (TXT or DOCX) and convert to PDF. Returns absolute PDF path.
 
     Args:
         data: ContractData with all contract fields
@@ -313,30 +339,38 @@ async def generate_contract(data: ContractData, extra: dict | None = None) -> st
     if extra is None:
         extra = {}
 
-    # Find template
-    template_path = config.TEMPLATES_DIR / data.group / f"{data.apartment}.txt"
-    if not template_path.exists():
-        raise FileNotFoundError(f"Template not found: {template_path}")
+    # Find template — prefer .docx, fallback to .txt
+    docx_path = config.TEMPLATES_DIR / data.group / f"{data.apartment}.docx"
+    txt_path = config.TEMPLATES_DIR / data.group / f"{data.apartment}.txt"
+
+    if docx_path.exists():
+        template_path = docx_path
+        template_type = "docx"
+    elif txt_path.exists():
+        template_path = txt_path
+        template_type = "txt"
+    else:
+        raise FileNotFoundError(
+            f"Template not found: {docx_path} or {txt_path}"
+        )
 
     # Build replacements and fill
     replacements = _build_replacements(data, extra)
-    filled_text = _fill_txt_template(template_path, replacements)
-
-    # Write filled TXT to temp location
     safe_name = data.contract_number.replace("/", "_")
     out_dir = config.CONTRACTS_DIR / data.group / data.apartment
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    filled_txt_path = out_dir / f"{safe_name}.txt"
-    filled_txt_path.write_text(filled_text, encoding="utf-8")
+    if template_type == "docx":
+        filled_path = out_dir / f"{safe_name}.docx"
+        _fill_docx_template(template_path, replacements, filled_path)
+    else:
+        filled_path = out_dir / f"{safe_name}.txt"
+        filled_text = _fill_txt_template(template_path, replacements)
+        filled_path.write_text(filled_text, encoding="utf-8")
+
+    logger.info("Template filled (%s): %s", template_type, filled_path)
 
     # Convert to PDF via LibreOffice
-    try:
-        pdf_path = await asyncio.to_thread(_convert_txt_to_pdf, filled_txt_path, out_dir)
-        logger.info("PDF generated: %s", pdf_path)
-        return str(pdf_path)
-    except Exception:
-        raise
-    finally:
-        # Keep TXT as backup (don't delete)
-        pass
+    pdf_path = await asyncio.to_thread(_convert_to_pdf, filled_path, out_dir)
+    logger.info("PDF generated: %s", pdf_path)
+    return str(pdf_path)
