@@ -5,7 +5,11 @@ Public API:
 """
 import logging
 import re
+import subprocess
 from decimal import Decimal
+
+import anthropic
+from sqlalchemy.exc import IntegrityError
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
@@ -239,9 +243,19 @@ async def handle_passport_page2(update: Update, context: ContextTypes.DEFAULT_TY
 
     await update.message.reply_text("Распознаю паспорт... ⏳")
 
-    fields = await ocr_service.extract_passport_fields(
-        context.user_data["passport_page1"], file_bytes
-    )
+    try:
+        fields = await ocr_service.extract_passport_fields(
+            context.user_data["passport_page1"], file_bytes
+        )
+    except (anthropic.APIError, ValueError) as exc:
+        logger.error("OCR failed: %s", exc)
+        context.user_data.pop("passport_page1", None)
+        context.user_data.pop("passport_page2", None)
+        await update.message.reply_text(
+            "Не удалось распознать паспорт. "
+            "Попробуйте сфотографировать паспорт чётче и отправить заново."
+        )
+        return PASSPORT_PAGE1
     context.user_data["passport_fields"] = fields
 
     # Pop large bytes after OCR to keep PicklePersistence file small
@@ -362,12 +376,37 @@ async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     )
 
     # Generate PDF
-    pdf_path = await generate_contract(contract_data)
+    try:
+        pdf_path = await generate_contract(contract_data)
+    except subprocess.TimeoutExpired as exc:
+        logger.error("PDF generation timed out: %s", exc)
+        context.user_data.clear()
+        await query.edit_message_text(
+            "Генерация договора заняла слишком долго. Попробуйте ещё раз позже."
+        )
+        return ConversationHandler.END
+    except (FileNotFoundError, RuntimeError) as exc:
+        logger.error("PDF generation failed: %s", exc)
+        context.user_data.clear()
+        await query.edit_message_text(
+            "Не удалось создать договор. Обратитесь к администратору."
+        )
+        return ConversationHandler.END
+
     contract_data.pdf_path = pdf_path
     logger.info("PDF generated: %s", pdf_path)
 
     # Save to database
-    row_id = await database.save_contract(contract_data)
+    try:
+        row_id = await database.save_contract(contract_data)
+    except IntegrityError as exc:
+        logger.error("DB save failed (duplicate contract number?): %s", exc)
+        context.user_data.clear()
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text="Договор с таким номером уже существует. Проверьте архив или начните заново: /start",
+        )
+        return ConversationHandler.END
     logger.info("Contract saved to DB: id=%d contract_number=%s", row_id, contract_number)
 
     # Send PDF to user
