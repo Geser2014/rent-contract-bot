@@ -23,7 +23,7 @@ from telegram.ext import (
 
 import ocr_service
 import database
-from document_service import generate_contract, generate_contract_number
+from document_service import generate_contract, generate_contract_number, get_apartment_names
 from models import ContractData
 from validators import validate_age, validate_amount, validate_date, validate_email, validate_phone
 
@@ -37,23 +37,19 @@ logger = logging.getLogger(__name__)
     APARTMENT,
     CONTRACT_DATE,
     ACT_DATE,
+    CONTRACT_DURATION,
     MONTHLY_AMOUNT,
     DEPOSIT_AMOUNT,
     DEPOSIT_METHOD,
     PHONE,
     EMAIL,
+    TELEGRAM,
+    RESIDENTS,
+    EXTRA_CONDITIONS,
     PASSPORT_PAGE1,
     PASSPORT_PAGE2,
     CONFIRM,
-) = range(12)
-
-# ---------------------------------------------------------------------------
-# Apartment data
-# ---------------------------------------------------------------------------
-APARTMENTS: dict[str, list[str]] = {
-    "Г39": ["39/1", "39/2", "39/3", "39/4", "39/5", "39/6", "39/7"],
-    "Г38": ["38/1", "38/2", "38/3", "38/4", "38/5", "38/6", "38/7", "38/8"],
-}
+) = range(16)
 
 
 # ---------------------------------------------------------------------------
@@ -87,11 +83,15 @@ async def handle_group(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     group = query.data
     context.user_data["group"] = group
 
-    apartments = APARTMENTS[group]
-    # Build rows of 4 buttons max
+    apartments = get_apartment_names(group)
+    if not apartments:
+        await query.edit_message_text(f"Нет квартир в группе {group}. Начните заново: /start")
+        return ConversationHandler.END
+
+    # Build rows of 3 buttons max
     rows = [
-        [InlineKeyboardButton(apt, callback_data=apt) for apt in apartments[i:i + 4]]
-        for i in range(0, len(apartments), 4)
+        [InlineKeyboardButton(apt, callback_data=apt) for apt in apartments[i:i + 3]]
+        for i in range(0, len(apartments), 3)
     ]
     await query.edit_message_text(
         f"Группа {group}. Выберите квартиру:",
@@ -131,6 +131,17 @@ async def handle_act_date(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text(result)
         return ACT_DATE
     context.user_data["act_date"] = result
+    await update.message.reply_text("Введите срок договора в днях (например, 365):")
+    return CONTRACT_DURATION
+
+
+async def handle_contract_duration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Validate and store contract duration in days."""
+    text = update.message.text.strip()
+    if not text.isdigit() or int(text) <= 0:
+        await update.message.reply_text("Введите положительное целое число (например, 365):")
+        return CONTRACT_DURATION
+    context.user_data["contract_duration"] = text
     await update.message.reply_text("Введите сумму ежемесячной аренды (например, 50000):")
     return MONTHLY_AMOUNT
 
@@ -179,8 +190,6 @@ async def handle_deposit_method(update: Update, context: ContextTypes.DEFAULT_TY
 async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Validate and store tenant phone number."""
     result = validate_phone(update.message.text)
-    # validate_phone returns str on both success (+7XXXXXXXXXX) and error.
-    # Detect success by matching the normalized E.164 format exactly.
     if not re.fullmatch(r'\+7\d{10}', result):
         await update.message.reply_text(result)
         return PHONE
@@ -190,14 +199,47 @@ async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
 
 async def handle_email(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Validate and store tenant email — ask for passport page 1."""
+    """Validate and store tenant email — ask for Telegram username."""
     result = validate_email(update.message.text)
-    # validate_email returns str on both success (lowercased email) and error.
-    # Detect success by matching a basic email pattern.
     if not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', result):
         await update.message.reply_text(result)
         return EMAIL
     context.user_data["tenant_email"] = result
+    await update.message.reply_text("Введите Telegram арендатора (например, @username):")
+    return TELEGRAM
+
+
+async def handle_telegram(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Store Telegram username — ask for residents list."""
+    context.user_data["telegram"] = update.message.text.strip()
+    await update.message.reply_text(
+        'Кто будет проживать с арендатором?\n'
+        '(Введите ФИО через запятую, или "нет" если только арендатор)'
+    )
+    return RESIDENTS
+
+
+async def handle_residents(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Store residents — ask for extra conditions."""
+    text = update.message.text.strip()
+    if text.lower() in ("нет", "нету", "-", "только я"):
+        context.user_data["residents"] = "Нет"
+    else:
+        context.user_data["residents"] = text
+    await update.message.reply_text(
+        'Дополнительные условия?\n'
+        '(Введите текст или "нет")'
+    )
+    return EXTRA_CONDITIONS
+
+
+async def handle_extra_conditions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Store extra conditions — ask for passport page 1."""
+    text = update.message.text.strip()
+    if text.lower() in ("нет", "нету", "-"):
+        context.user_data["extra_conditions"] = "Нет"
+    else:
+        context.user_data["extra_conditions"] = text
     await update.message.reply_text(
         "Отправьте *первую страницу паспорта* арендатора как файл "
         "(Прикрепить → Файл, не как фото):",
@@ -258,7 +300,7 @@ async def handle_passport_page2(update: Update, context: ContextTypes.DEFAULT_TY
         return PASSPORT_PAGE1
     context.user_data["passport_fields"] = fields
 
-    # Pop large bytes after OCR to keep PicklePersistence file small
+    # Pop large bytes after OCR
     context.user_data.pop("passport_page1", None)
     context.user_data.pop("passport_page2", None)
 
@@ -367,7 +409,14 @@ async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         deposit_split=ud.get("deposit_split", False),
     )
 
-    context.user_data["contract_data"] = contract_data
+    # Extra fields not in ContractData
+    extra = {
+        "telegram": ud.get("telegram", "___"),
+        "residents": ud.get("residents", "___"),
+        "contract_duration": ud.get("contract_duration", "___"),
+        "extra_conditions": ud.get("extra_conditions", "Нет"),
+    }
+
     logger.info("ContractData assembled: contract_number=%s", contract_number)
 
     await query.edit_message_text(
@@ -377,7 +426,7 @@ async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     # Generate PDF
     try:
-        pdf_path = await generate_contract(contract_data)
+        pdf_path = await generate_contract(contract_data, extra)
     except subprocess.TimeoutExpired as exc:
         logger.error("PDF generation timed out: %s", exc)
         context.user_data.clear()
@@ -389,7 +438,7 @@ async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         logger.error("PDF generation failed: %s", exc)
         context.user_data.clear()
         await query.edit_message_text(
-            "Не удалось создать договор. Обратитесь к администратору."
+            f"Не удалось создать договор: {exc}"
         )
         return ConversationHandler.END
 
@@ -404,7 +453,7 @@ async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         context.user_data.clear()
         await context.bot.send_message(
             chat_id=query.message.chat_id,
-            text="Договор с таким номером уже существует. Проверьте архив или начните заново: /start",
+            text="Договор с таким номером уже существует. Начните заново: /start",
         )
         return ConversationHandler.END
     logger.info("Contract saved to DB: id=%d contract_number=%s", row_id, contract_number)
@@ -454,15 +503,19 @@ def build_conversation_handler() -> ConversationHandler:
     return ConversationHandler(
         entry_points=[CommandHandler("start", cmd_start)],
         states={
-            GROUP:          [CallbackQueryHandler(handle_group)],
-            APARTMENT:      [CallbackQueryHandler(handle_apartment)],
-            CONTRACT_DATE:  [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_contract_date)],
-            ACT_DATE:       [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_act_date)],
-            MONTHLY_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_monthly_amount)],
-            DEPOSIT_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_deposit_amount)],
-            DEPOSIT_METHOD: [CallbackQueryHandler(handle_deposit_method)],
-            PHONE:          [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_phone)],
-            EMAIL:          [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_email)],
+            GROUP:            [CallbackQueryHandler(handle_group)],
+            APARTMENT:        [CallbackQueryHandler(handle_apartment)],
+            CONTRACT_DATE:    [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_contract_date)],
+            ACT_DATE:         [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_act_date)],
+            CONTRACT_DURATION:[MessageHandler(filters.TEXT & ~filters.COMMAND, handle_contract_duration)],
+            MONTHLY_AMOUNT:   [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_monthly_amount)],
+            DEPOSIT_AMOUNT:   [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_deposit_amount)],
+            DEPOSIT_METHOD:   [CallbackQueryHandler(handle_deposit_method)],
+            PHONE:            [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_phone)],
+            EMAIL:            [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_email)],
+            TELEGRAM:         [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_telegram)],
+            RESIDENTS:        [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_residents)],
+            EXTRA_CONDITIONS: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_extra_conditions)],
             PASSPORT_PAGE1: [
                 MessageHandler(filters.Document.ALL, handle_passport_page1),
                 MessageHandler(filters.PHOTO, handle_passport_photo_warning_p1),
@@ -471,7 +524,7 @@ def build_conversation_handler() -> ConversationHandler:
                 MessageHandler(filters.Document.ALL, handle_passport_page2),
                 MessageHandler(filters.PHOTO, handle_passport_photo_warning_p2),
             ],
-            CONFIRM:        [CallbackQueryHandler(handle_confirm)],
+            CONFIRM:          [CallbackQueryHandler(handle_confirm)],
         },
         fallbacks=[
             CommandHandler("cancel", cmd_cancel),
