@@ -10,6 +10,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
+# Install Oswald font
+COPY fonts/Oswald-VariableFont_wght.ttf /usr/share/fonts/truetype/oswald/
+RUN fc-cache -f -v
+
 # Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
