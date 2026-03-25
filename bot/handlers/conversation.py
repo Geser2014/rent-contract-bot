@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 # State integer constants
 # ---------------------------------------------------------------------------
 (
+    AUTH,
     GROUP,
     APARTMENT,
     CONTRACT_DATE,
@@ -61,7 +62,21 @@ logger = logging.getLogger(__name__)
     EDIT_FIELD,
     CHOOSE_FORMAT,
     CONFIRM,
-) = range(25)
+) = range(26)
+
+# Authorized users file
+import json as _json
+_AUTH_FILE = Path("storage/authorized_users.json")
+
+def _load_authorized_users() -> set[int]:
+    if _AUTH_FILE.exists():
+        return set(_json.loads(_AUTH_FILE.read_text()))
+    return set()
+
+def _save_authorized_user(user_id: int) -> None:
+    users = _load_authorized_users()
+    users.add(user_id)
+    _AUTH_FILE.write_text(_json.dumps(list(users)))
 
 
 # ---------------------------------------------------------------------------
@@ -69,11 +84,44 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Send group selection keyboard and enter GROUP state."""
+    """Check auth, then show group selection."""
+    import config
+    user_id = update.effective_user.id
+
+    # If no password configured — skip auth
+    if not config.BOT_PASSWORD:
+        return await _show_groups(update, context)
+
+    # If already authorized — skip auth
+    if user_id in _load_authorized_users():
+        return await _show_groups(update, context)
+
+    # Ask for password
+    await update.message.reply_text("Введите пароль для доступа к боту:")
+    return AUTH
+
+
+async def handle_auth(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Check password and authorize user."""
+    import config
+    password = update.message.text.strip()
+
+    if password == config.BOT_PASSWORD:
+        user_id = update.effective_user.id
+        _save_authorized_user(user_id)
+        logger.info("User %d authorized", user_id)
+        await update.message.reply_text("✅ Доступ разрешён!")
+        return await _show_groups(update, context)
+    else:
+        await update.message.reply_text("❌ Неверный пароль. Попробуйте ещё раз:")
+        return AUTH
+
+
+async def _show_groups(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Show group selection keyboard."""
     from document_service import APARTMENTS_DATA
     context.user_data.clear()
     groups = [g for g in APARTMENTS_DATA.keys()]
-    # 2 buttons per row
     rows = [
         [InlineKeyboardButton(g, callback_data=g) for g in groups[i:i+2]]
         for i in range(0, len(groups), 2)
@@ -998,6 +1046,7 @@ def build_conversation_handler() -> ConversationHandler:
     return ConversationHandler(
         entry_points=[CommandHandler("start", cmd_start)],
         states={
+            AUTH:             [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_auth)],
             GROUP:            [CallbackQueryHandler(handle_group)],
             APARTMENT:        [CallbackQueryHandler(handle_apartment)],
             CONTRACT_DATE:    [CallbackQueryHandler(handle_contract_date_cal)],

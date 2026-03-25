@@ -17,6 +17,7 @@ ANTHROPIC_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
 # --- Optional with defaults ---
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO").upper()
 STORAGE_DIR: Path = Path(os.getenv("STORAGE_DIR", "storage"))
+BOT_PASSWORD: str = os.getenv("BOT_PASSWORD", "")
 
 # --- Derived paths ---
 TEMPLATES_DIR: Path = STORAGE_DIR / "templates"
