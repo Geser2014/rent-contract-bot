@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(taskkill //F //IM python.exe)",
+      "mcp__plugin_claude-mem_mcp-search__smart_outline",
+      "Bash(/c/Users/User/Documents/rent-contract-bot/venv/Scripts/pip.exe install:*)",
+      "Bash(venv/Scripts/python.exe -c \":*)"
+    ]
+  }
+}

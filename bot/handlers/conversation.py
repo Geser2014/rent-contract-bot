@@ -179,9 +179,16 @@ async def handle_act_date_cal(update: Update, context: ContextTypes.DEFAULT_TYPE
         return ACT_DATE
     if result:
         context.user_data["act_date"] = result
-        await query.edit_message_text(
-            f"✅ Дата Акта: {result.strftime('%d.%m.%Y')}\n\n"
-            "Введите срок договора в днях (например, 365):"
+        from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
+        await query.edit_message_text(f"✅ Дата Акта: {result.strftime('%d.%m.%Y')}")
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text="Выберите срок договора:",
+            reply_markup=ReplyKeyboardMarkup(
+                [["360 дней", "Ввести вручную"]],
+                resize_keyboard=True,
+                one_time_keyboard=True,
+            ),
         )
         return CONTRACT_DURATION
     return ACT_DATE
@@ -189,12 +196,24 @@ async def handle_act_date_cal(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def handle_contract_duration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Validate and store contract duration in days."""
+    from telegram import ReplyKeyboardRemove
     text = update.message.text.strip()
+    if text == "360 дней":
+        text = "360"
+    elif text == "Ввести вручную":
+        await update.message.reply_text(
+            "Введите срок договора в днях:",
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        return CONTRACT_DURATION
     if not text.isdigit() or int(text) <= 0:
         await update.message.reply_text("Введите положительное целое число (например, 365):")
         return CONTRACT_DURATION
     context.user_data["contract_duration"] = text
-    await update.message.reply_text("Введите сумму ежемесячной аренды (например, 50000):")
+    await update.message.reply_text(
+        "Введите сумму ежемесячной аренды (например, 50000):",
+        reply_markup=ReplyKeyboardRemove(),
+    )
     return MONTHLY_AMOUNT
 
 

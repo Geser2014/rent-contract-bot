@@ -267,6 +267,14 @@ def _fill_docx_template(template_path: Path, replacements: dict[str, str], outpu
                     if key in run.text:
                         run.text = run.text.replace(key, value)
 
+    # If no extra conditions, remove the entire 6.6 paragraph
+    extra_cond = replacements.get("[ДОП_УСЛОВИЯ]", "Нет")
+    if extra_cond in ("Нет", "нет", "", "___"):
+        for paragraph in doc.paragraphs:
+            if "ДОП_УСЛОВИЯ" in paragraph.text and "6.6" in paragraph.text:
+                paragraph._element.getparent().remove(paragraph._element)
+                break
+
     for paragraph in doc.paragraphs:
         replace_in_paragraph(paragraph)
 
