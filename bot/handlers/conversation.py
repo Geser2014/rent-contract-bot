@@ -66,7 +66,14 @@ logger = logging.getLogger(__name__)
 
 # Authorized users file
 import json as _json
-_AUTH_FILE = Path("storage/authorized_users.json")
+import hmac
+import time as _time
+_AUTH_FILE = config.STORAGE_DIR / "authorized_users.json"
+
+# Brute-force protection: {user_id: {"attempts": int, "locked_until": float}}
+_failed_attempts: dict[int, dict] = {}
+_MAX_ATTEMPTS = 3
+_LOCKOUT_SECONDS = 86400  # 24 hours
 
 def _load_authorized_users() -> set[int]:
     if _AUTH_FILE.exists():
@@ -77,6 +84,25 @@ def _save_authorized_user(user_id: int) -> None:
     users = _load_authorized_users()
     users.add(user_id)
     _AUTH_FILE.write_text(_json.dumps(list(users)))
+
+def _is_locked_out(user_id: int) -> bool:
+    info = _failed_attempts.get(user_id)
+    if not info:
+        return False
+    if info["attempts"] >= _MAX_ATTEMPTS:
+        if _time.time() < info["locked_until"]:
+            return True
+        # Lockout expired — reset
+        del _failed_attempts[user_id]
+        return False
+    return False
+
+def _record_failed_attempt(user_id: int) -> int:
+    info = _failed_attempts.setdefault(user_id, {"attempts": 0, "locked_until": 0})
+    info["attempts"] += 1
+    if info["attempts"] >= _MAX_ATTEMPTS:
+        info["locked_until"] = _time.time() + _LOCKOUT_SECONDS
+    return _MAX_ATTEMPTS - info["attempts"]
 
 
 # ---------------------------------------------------------------------------
@@ -104,16 +130,26 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def handle_auth(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Check password and authorize user."""
     import config
+    user_id = update.effective_user.id
     password = update.message.text.strip()
 
-    if password == config.BOT_PASSWORD:
-        user_id = update.effective_user.id
+    # Check lockout
+    if _is_locked_out(user_id):
+        await update.message.reply_text("⛔ Слишком много попыток. Доступ заблокирован на 24 часа.")
+        return ConversationHandler.END
+
+    if hmac.compare_digest(password, config.BOT_PASSWORD):
         _save_authorized_user(user_id)
+        _failed_attempts.pop(user_id, None)  # Clear failed attempts
         logger.info("User %d authorized", user_id)
         await update.message.reply_text("✅ Доступ разрешён!")
         return await _show_groups(update, context)
     else:
-        await update.message.reply_text("❌ Неверный пароль. Попробуйте ещё раз:")
+        remaining = _record_failed_attempt(user_id)
+        if remaining <= 0:
+            await update.message.reply_text("⛔ Слишком много попыток. Доступ заблокирован на 24 часа.")
+            return ConversationHandler.END
+        await update.message.reply_text(f"❌ Неверный пароль. Осталось попыток: {remaining}")
         return AUTH
 
 
@@ -316,7 +352,8 @@ async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 async def handle_email(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Validate and store tenant email — ask for Telegram username."""
     result = validate_email(update.message.text)
-    if not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', result):
+    if "@" not in result:
+        # validate_email returns error string (no @ in it) on failure
         await update.message.reply_text(result)
         return EMAIL
     context.user_data["tenant_email"] = result

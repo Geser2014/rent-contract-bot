@@ -1,8 +1,22 @@
 """Handler for /stats command — contract statistics."""
+import json as _json
+from pathlib import Path
+
 from telegram import Update
 from telegram.ext import CommandHandler, ContextTypes
 
+import config
 import database
+
+_AUTH_FILE = config.STORAGE_DIR / "authorized_users.json"
+
+
+def _is_authorized(user_id: int) -> bool:
+    if not config.BOT_PASSWORD:
+        return True
+    if _AUTH_FILE.exists():
+        return user_id in set(_json.loads(_AUTH_FILE.read_text()))
+    return False
 
 _MONTH_NAMES = {
     1: "Январь", 2: "Февраль", 3: "Март", 4: "Апрель",
@@ -13,6 +27,9 @@ _MONTH_NAMES = {
 
 async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show contract statistics."""
+    if not _is_authorized(update.effective_user.id):
+        await update.message.reply_text("⛔ Нет доступа. Используйте /start для авторизации.")
+        return
     s = await database.get_stats()
 
     lines = [f"📊 *Статистика договоров*\n\nВсего: *{s['total']}*\n"]

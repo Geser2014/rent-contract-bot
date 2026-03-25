@@ -1,13 +1,26 @@
 """Handler for /history — year → month → contract list → open PDF."""
+import json as _json
 import logging
 from pathlib import Path
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import CallbackQueryHandler, CommandHandler, ContextTypes
 
+import config
 import database
 
 logger = logging.getLogger(__name__)
+
+_AUTH_FILE = config.STORAGE_DIR / "authorized_users.json"
+
+
+def _is_authorized(user_id: int) -> bool:
+    """Check if user is authorized."""
+    if not config.BOT_PASSWORD:
+        return True
+    if _AUTH_FILE.exists():
+        return user_id in set(_json.loads(_AUTH_FILE.read_text()))
+    return False
 
 _MONTH_NAMES = {
     1: "Январь", 2: "Февраль", 3: "Март", 4: "Апрель",
@@ -29,6 +42,9 @@ def _short_name(full_name: str) -> str:
 
 async def cmd_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show available years as buttons."""
+    if not _is_authorized(update.effective_user.id):
+        await update.message.reply_text("⛔ Нет доступа. Используйте /start для авторизации.")
+        return
     years = await database.get_available_years()
     if not years:
         await update.message.reply_text("📋 Договоров пока нет.")
