@@ -708,7 +708,7 @@ async def handle_confirm_ocr(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return PASSPORT_PAGE1
 
     if query.data == "ocr_ok":
-        return await _show_final_confirm(query, context)
+        return await _show_final_confirm(update, context)
 
     if query.data == "ocr_edit":
         return await _show_field_picker(query, context)
@@ -783,22 +783,12 @@ async def handle_edit_field_text(update: Update, context: ContextTypes.DEFAULT_T
     return CONFIRM_OCR
 
 
-async def _show_final_confirm(query, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Ask for output format before generating contract."""
-    keyboard = [
-        [
-            InlineKeyboardButton("📄 PDF", callback_data="fmt_pdf"),
-            InlineKeyboardButton("📝 DOCX", callback_data="fmt_docx"),
-            InlineKeyboardButton("📄+📝 Оба", callback_data="fmt_both"),
-        ],
-        [InlineKeyboardButton("Отмена ❌", callback_data="cancel_confirm")],
-    ]
-    await query.edit_message_text(
-        "✅ Паспортные данные подтверждены.\n\n"
-        "В каком формате выгрузить договор?",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-    )
-    return CHOOSE_FORMAT
+async def _show_final_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Confirm and proceed directly to DOCX generation."""
+    query = update.callback_query
+    context.user_data["output_format"] = "docx"
+    await query.edit_message_text("✅ Данные подтверждены.\nГенерирую договор...")
+    return await handle_confirm(update, context)
 
 
 async def handle_choose_format(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
