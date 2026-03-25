@@ -11,6 +11,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import anthropic
+import config
 from sqlalchemy.exc import IntegrityError
 from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 
@@ -111,7 +112,6 @@ def _record_failed_attempt(user_id: int) -> int:
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Check auth, then show group selection."""
-    import config
     user_id = update.effective_user.id
 
     # If no password configured — skip auth
@@ -129,7 +129,6 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def handle_auth(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Check password and authorize user."""
-    import config
     user_id = update.effective_user.id
     password = update.message.text.strip()
 
